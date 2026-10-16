@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-build="fob-20261016-1114">
+<html lang="en" data-build="fob-20261016-1122">
 <head>
 <meta charset="UTF-8">
 <meta name="mobile-web-app-capable" content="yes">
@@ -200,8 +200,8 @@ html.embedded #powerby{padding:2px 8px !important; font-size:14px !important;}
 </main>
 <nav id="bottomnav">
   <button data-tab="dash" class="active"><span class="ico">&#9673;</span>Home</button>
-  <button data-tab="fobs"><span class="ico">&#9670;</span>Fobs</button>
-  <button data-tab="beacons"><span class="ico">📡</span>Beacons</button>
+  <button data-tab="fobs"><span class="ico"><img src="securalert-logo.jpg" alt="SECURalert" style="height:23px;width:auto;display:block;margin:0 auto;border-radius:3px"></span>Fobs</button>
+  <button data-tab="beacons"><span class="ico"><img src="securalert-logo.jpg" alt="SECURalert" style="height:23px;width:auto;display:block;margin:0 auto;border-radius:3px"></span>Beacons</button>
 </nav>
 <div id="print-area"></div>
 <style>
@@ -738,8 +738,7 @@ function renderFobs(){
   // Also search customer tickets when there's a query
   const fq = (fobSearch||'').toLowerCase();
   const matchingTickets = fq ? customerTickets.filter(t => (t.id+' '+t.hotel+' '+t.fobId+' '+t.issue+' '+t.approvedBy).toLowerCase().includes(fq)) : [];
-  let h = '<div style="background:#fff;border-radius:12px;padding:10px 12px;margin-bottom:10px"><img src="securalert-logo.jpg" alt="SECURalert" style="width:100%;max-width:520px;display:block;margin:0 auto"></div>'
-    + '<div class="toolbar"><input id="fobq" placeholder="Search fobs & tickets..." value="'+esc(fobSearch)+'">'
+  let h = '<div class="toolbar"><input id="fobq" placeholder="Search fobs & tickets..." value="'+esc(fobSearch)+'">'
     +'<button class="btn btn-primary btn-sm" onclick="addFobForm()">+ Add</button></div>';
   if(fobStatusSet) h += '<div style="margin:2px 0 10px"><button class="chip active" onclick="clearFobStatusSet()">Showing: Need attention \u2715</button></div>';
   const selN = Object.keys(fobSel).length;
@@ -1653,8 +1652,7 @@ window.pinForForm = pfx=>{
 function renderBeacons(){
   const list = S.beacons.filter(x=>inFilter(x.prop) &&
     (!beaconSearch || (x.beaconId+" "+(x.area||"")+" "+(x.status||"")+" "+propName(x.prop)).toLowerCase().includes(beaconSearch.toLowerCase())));
-  let h = '<div style="background:#fff;border-radius:12px;padding:10px 12px;margin-bottom:10px"><img src="securalert-logo.jpg" alt="SECURalert" style="width:100%;max-width:520px;display:block;margin:0 auto"></div>'
-    + '<div class="toolbar"><input id="beaconq" placeholder="Search beacons..." value="'+esc(beaconSearch)+'">'
+  let h = '<div class="toolbar"><input id="beaconq" placeholder="Search beacons..." value="'+esc(beaconSearch)+'">'
     +'<button class="btn btn-primary btn-sm" onclick="addBeaconForm()">+ Add</button></div>';
   if(!list.length) h += '<div class="card"><div class="empty">No beacons here yet.<br><br><button class="btn btn-primary btn-sm" onclick="addBeaconForm()">+ Add your first beacon</button></div></div>';
   else h += '<div class="cards2">';
