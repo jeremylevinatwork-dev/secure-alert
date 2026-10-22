@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-build="fob-20261022-1055">
+<html lang="en" data-build="fob-20261022-1341">
 <head>
 <meta charset="UTF-8">
 <meta name="mobile-web-app-capable" content="yes">
@@ -989,7 +989,7 @@ function renderFobs(){
       +'<div style="display:flex;gap:8px;margin:2px 0 10px;width:100%;"><button class="btn btn-gold" style="flex:1" onclick="printFobList()">🖨 Print list</button><button class="btn btn-ghost" style="flex:1" onclick="emailFobList()">✉ Email list</button></div>'
     +'<div style="display:flex;gap:8px;margin:0 0 10px;width:100%;"><button class="btn btn-ghost" style="flex:1" onclick="toggleDiscardedView()">\uD83D\uDDD1 '+(fobDiscarded ? 'Back to all fobs' : 'Search discarded fobs')+' ('+S.fobs.filter(f=>f.discardedAt).length+' on file)</button></div>'
   if(fobDiscarded) h += '<div style="margin:2px 0 10px"><button class="chip active" onclick="toggleDiscardedView()">Showing: discarded fobs \u2014 kept on file for one year \u2715</button></div>';
-  if(fobDiscarded){ const _remake = list.filter(f=>f.num && !f.remadeAt); if(_remake.length) h += '<div class="card" style="border:2px solid #c9a227"><h3 style="margin-bottom:4px">\uD83C\uDFF7 Tag numbers to remake \u2014 ' + _remake.length + '</h3><div class="note" style="margin-bottom:8px">These tag numbers came off trashed fobs. Make a new tag for each one, then tap Remade.</div>' + _remake.map(f=>'<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:7px 2px;border-bottom:1px solid #EDF0F4"><span><span style="display:inline-block;background:#1a202c;color:#fff;font-weight:800;border-radius:6px;padding:2px 10px;font-size:16px">' + esc(f.num) + '</span> <b>' + esc(propName(f.prop)) + '</b> <span class="note">' + esc(f.fobId) + ' \u00B7 trashed ' + esc(fmtD(f.discardedAt)) + '</span></span><button class="btn btn-gold btn-sm" style="width:auto;margin:0" onclick="markTagRemade(\'' + f.uid + '\')">\u2713 Remade</button></div>').join('') + '</div>'; }
+  if(fobDiscarded){ const _remake = list.filter(f=>f.num && !f.remadeAt); window._remakeNums = _remake.map(f=>f.num); if(_remake.length) h += '<div class="card" style="border:2px solid #c9a227"><h3 style="margin-bottom:4px">\uD83C\uDFF7 Tag numbers to remake \u2014 ' + _remake.length + '</h3><div class="note" style="margin-bottom:8px">These tag numbers came off trashed fobs. Make a new tag for each one, then tap Remade.</div>' + '<div style="margin-bottom:10px"><button class="btn btn-primary btn-sm" style="width:auto;margin:0" onclick="printRemakeList()">🖨 Print tag numbers</button></div>' + _remake.map(f=>'<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:7px 2px;border-bottom:1px solid #EDF0F4"><span><span style="display:inline-block;background:#1a202c;color:#fff;font-weight:800;border-radius:6px;padding:2px 10px;font-size:16px">' + esc(f.num) + '</span> <b>' + esc(propName(f.prop)) + '</b> <span class="note">' + esc(f.fobId) + ' \u00B7 trashed ' + esc(fmtD(f.discardedAt)) + '</span></span><button class="btn btn-gold btn-sm" style="width:auto;margin:0" onclick="markTagRemade(\'' + f.uid + '\')">\u2713 Remade</button></div>').join('') + '</div>'; }
   if(fobStatusSet) h += '<div style="margin:2px 0 10px"><button class="chip active" onclick="clearFobStatusSet()">Showing: Need attention \u2715</button></div>';
   if(fobSentProp) h += '<div style="margin:2px 0 10px"><button class="chip active" onclick="clearFobSentProp()">Showing: '+(fobSentProp==="ALL" ? "All hotels" : esc(fobSentProp))+' \u2014 submitted to SecurAlert \u2713 only \u2715</button></div>';
   if(fobNotSent) h += '<div style="margin:2px 0 10px"><button class="chip active" onclick="clearFobNotSent()">Showing: not yet submitted \u2715</button></div>';
@@ -1535,6 +1535,15 @@ window.openPickupSheet = ()=>{
   }
   h += '<button class="btn btn-ghost" onclick="closeSheet()">Close</button>';
   openSheet(h);
+};
+window.printRemakeList = ()=>{
+  const nums = (window._remakeNums && window._remakeNums.length) ? window._remakeNums.slice()
+    : S.fobs.filter(f=>f.discardedAt && f.num && !f.remadeAt).map(f=>f.num);
+  if(!nums.length){ toast('No tag numbers to remake'); return; }
+  const body = '<div style="display:flex;flex-wrap:wrap;gap:16px;margin-top:10px">'
+    + nums.map(n=>'<span style="display:inline-block;background:#1a202c;color:#fff;font-weight:800;border-radius:8px;padding:10px 22px;font-size:30px;letter-spacing:1px">' + esc(n) + '</span>').join('')
+    + '</div>';
+  printReport('Tag numbers to remake', body);
 };
 window.printPickupList = ()=>{
   const need = S.fobs.filter(f=>fobNeedsPickup(f));
