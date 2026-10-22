@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-build="fob-20261022-1341">
+<html lang="en" data-build="fob-20261022-1446">
 <head>
 <meta charset="UTF-8">
 <meta name="mobile-web-app-capable" content="yes">
@@ -989,7 +989,7 @@ function renderFobs(){
       +'<div style="display:flex;gap:8px;margin:2px 0 10px;width:100%;"><button class="btn btn-gold" style="flex:1" onclick="printFobList()">🖨 Print list</button><button class="btn btn-ghost" style="flex:1" onclick="emailFobList()">✉ Email list</button></div>'
     +'<div style="display:flex;gap:8px;margin:0 0 10px;width:100%;"><button class="btn btn-ghost" style="flex:1" onclick="toggleDiscardedView()">\uD83D\uDDD1 '+(fobDiscarded ? 'Back to all fobs' : 'Search discarded fobs')+' ('+S.fobs.filter(f=>f.discardedAt).length+' on file)</button></div>'
   if(fobDiscarded) h += '<div style="margin:2px 0 10px"><button class="chip active" onclick="toggleDiscardedView()">Showing: discarded fobs \u2014 kept on file for one year \u2715</button></div>';
-  if(fobDiscarded){ const _remake = list.filter(f=>f.num && !f.remadeAt); window._remakeNums = _remake.map(f=>f.num); if(_remake.length) h += '<div class="card" style="border:2px solid #c9a227"><h3 style="margin-bottom:4px">\uD83C\uDFF7 Tag numbers to remake \u2014 ' + _remake.length + '</h3><div class="note" style="margin-bottom:8px">These tag numbers came off trashed fobs. Make a new tag for each one, then tap Remade.</div>' + '<div style="margin-bottom:10px"><button class="btn btn-primary btn-sm" style="width:auto;margin:0" onclick="printRemakeList()">🖨 Print tag numbers</button></div>' + _remake.map(f=>'<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:7px 2px;border-bottom:1px solid #EDF0F4"><span><span style="display:inline-block;background:#1a202c;color:#fff;font-weight:800;border-radius:6px;padding:2px 10px;font-size:16px">' + esc(f.num) + '</span> <b>' + esc(propName(f.prop)) + '</b> <span class="note">' + esc(f.fobId) + ' \u00B7 trashed ' + esc(fmtD(f.discardedAt)) + '</span></span><button class="btn btn-gold btn-sm" style="width:auto;margin:0" onclick="markTagRemade(\'' + f.uid + '\')">\u2713 Remade</button></div>').join('') + '</div>'; }
+  if(fobDiscarded){ const _remake = list.filter(f=>f.num && !f.remadeAt); window._remakeNums = _remake.map(f=>f.num); if(_remake.length) h += '<div class="card" style="border:2px solid #c9a227"><h3 style="margin-bottom:4px">\uD83C\uDFF7 Tag numbers to remake \u2014 ' + _remake.length + '</h3><div class="note" style="margin-bottom:8px">These tag numbers came off trashed fobs. Make a new tag for each one, then tap Remade.</div>' + '<div style="margin-bottom:10px"><button class="btn btn-primary btn-sm" style="width:auto;margin:0" onclick="printRemakeList()">🖨 Print tag numbers</button></div>' + _remake.map(f=>'<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:7px 2px;border-bottom:1px solid #EDF0F4"><span><span style="display:inline-block;background:#1a202c;color:#fff;font-weight:800;border-radius:6px;padding:2px 10px;font-size:16px">' + esc(f.num) + '</span> <b>' + esc(propName(f.prop)) + '</b> <span class="note">' + esc(f.fobId) + ' \u00B7 trashed ' + esc(fmtD(f.discardedAt)) + '</span></span><span style="display:flex;gap:6px"><button class="btn btn-ghost btn-sm" style="width:auto;margin:0" onclick="editTagNum(\'' + f.uid + '\')">✏️ Edit</button><button class="btn btn-gold btn-sm" style="width:auto;margin:0" onclick="markTagRemade(\'' + f.uid + '\')">\u2713 Remade</button></span></div>').join('') + '</div>'; }
   if(fobStatusSet) h += '<div style="margin:2px 0 10px"><button class="chip active" onclick="clearFobStatusSet()">Showing: Need attention \u2715</button></div>';
   if(fobSentProp) h += '<div style="margin:2px 0 10px"><button class="chip active" onclick="clearFobSentProp()">Showing: '+(fobSentProp==="ALL" ? "All hotels" : esc(fobSentProp))+' \u2014 submitted to SecurAlert \u2713 only \u2715</button></div>';
   if(fobNotSent) h += '<div style="margin:2px 0 10px"><button class="chip active" onclick="clearFobNotSent()">Showing: not yet submitted \u2715</button></div>';
@@ -1146,6 +1146,11 @@ window.fobDetail = u=>{
     +(f.notes?'<div class="kv"><span>Notes</span><b>'+esc(f.notes)+"</b></div>":"")
     +(f.replId?'<div class="kv"><span>Replaced by</span><b>'+esc(f.replId)+' @ '+esc(propLabel(f.replProp))+' ('+fmtD(f.replDate)+")</b></div>":"")
     +'<div style="display:flex;gap:6px;margin:12px 0 2px"><button type="button" data-pane="details" class="fdt btn btn-sm '+(startPane==='details'?'btn-gold':'btn-ghost')+'" style="flex:1;width:auto;margin:0" onclick="fdTab(\'details\')">Details</button><button type="button" data-pane="ship" class="fdt btn btn-sm '+(startPane==='ship'?'btn-gold':'btn-ghost')+'" style="flex:1;width:auto;margin:0" onclick="fdTab(\'ship\')">Warranty &amp; Shipping</button><button type="button" data-pane="hist" class="fdt btn btn-sm '+(startPane==='hist'?'btn-gold':'btn-ghost')+'" style="flex:1;width:auto;margin:0" onclick="fdTab(\'hist\')">History</button></div><div class="fdpane" id="fdpane-details"'+(startPane==='details'?'':' style="display:none"')+'>'
+    +"<h2 class='sec'>ID &amp; tag number</h2>"
+    +'<div class="note" style="margin-bottom:8px">Fix the fob\'s ID number or the number on its tag if they were typed wrong.</div>'
+    +'<label>Fob ID number</label><input type="text" id="fd-fobid" value="'+esc(f.fobId||"")+'" placeholder="e.g. 41bbb50d">'
+    +'<label>Tag number</label><input type="text" id="fd-tag" value="'+esc(f.num||"")+'" placeholder="The number on the tag">'
+    +'<button class="btn btn-gold" onclick="saveFobIds(\''+f.uid+'\')">Save ID &amp; tag</button>'
     +"<h2 class='sec'>Assign fob</h2>"
     +'<label>Fob number</label><input type="text" id="fd-num" value="'+esc(f.num||"")+'" placeholder="The number on the fob">'
     +'<label>Staff name</label><input type="text" id="fd-staff" value="'+esc(f.staff||"")+'" placeholder="Housekeeper name">'
@@ -1574,6 +1579,37 @@ window.discardFob = u=>{
   f.hist.push({t: new Date().toISOString(), e: "Discarded \u2014 record kept on file for one year (until " + fmtD(until) + ")"});
   save(); closeSheet(); render();
   toast("Fob discarded \u2014 on file until " + fmtD(until));
+};
+window.saveFobIds = u=>{
+  const f = S.fobs.find(x=>x.uid===u); if(!f) return;
+  const idEl = document.getElementById('fd-fobid'), tagEl = document.getElementById('fd-tag');
+  if(!idEl || !tagEl) return;
+  const nid = (idEl.value || '').trim(), ntag = (tagEl.value || '').trim();
+  if(!nid){ toast('Fob ID cannot be blank'); return; }
+  if(S.fobs.some(x=>x.uid!==u && (x.fobId || '').toLowerCase()===nid.toLowerCase())){ toast('That fob ID already belongs to another fob'); return; }
+  const changes = [];
+  if(nid!==f.fobId) changes.push('ID ' + (f.fobId || '-') + ' -> ' + nid);
+  if(ntag!==(f.num || '')) changes.push('tag ' + (f.num || '-') + ' -> ' + (ntag || '-'));
+  if(!changes.length){ toast('No changes'); return; }
+  f.fobId = nid; f.num = ntag;
+  f.hist = f.hist || [];
+  f.hist.push({t: new Date().toISOString(), e: 'Corrected ' + changes.join(', ')});
+  save(); fobDetail(u); render();
+  toast('Saved - ' + changes.join(', '));
+};
+window.editTagNum = u=>{
+  const f = S.fobs.find(x=>x.uid===u); if(!f) return;
+  const v = prompt('Tag number for fob ' + f.fobId + ':', f.num || '');
+  if(v===null) return;
+  const nv = v.trim();
+  if(!nv){ toast('Tag number cannot be blank'); return; }
+  if(nv===f.num) return;
+  const old = f.num || '-';
+  f.num = nv;
+  f.hist = f.hist || [];
+  f.hist.push({t: new Date().toISOString(), e: 'Tag number corrected: ' + old + ' -> ' + nv});
+  save(); render();
+  toast('Tag number now ' + nv);
 };
 window.markTagRemade = u=>{
   const f = S.fobs.find(x=>x.uid===u); if(!f) return;
