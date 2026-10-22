@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-build="fob-20261021-2010">
+<html lang="en" data-build="fob-20261022-0915">
 <head>
 <meta charset="UTF-8">
 <meta name="mobile-web-app-capable" content="yes">
@@ -1157,6 +1157,11 @@ window.fobDetail = u=>{
     +'<label>Department</label><select id="fd-dept">'+FOB_DEPTS.map(d=>'<option'+(d===f.dept?" selected":"")+">"+d+"</option>").join("")+"</select>"
     +'<button class="btn btn-gold" onclick="setFobStatus(\''+f.uid+'\')">Update status</button>'
     +(f.pickedUp ? '<h2 class="sec">\uD83D\uDE90 Pickup</h2><div class="kv"><span>Picked up</span><b>' + esc(pickupWhen(f.pickedUp)) + (f.pickedUpBy ? ' \u00B7 ' + esc(f.pickedUpBy) : '') + '</b></div><button class="btn btn-ghost" onclick="undoPickup(\'' + f.uid + '\')">Undo pickup</button>' : (fobNeedsPickup(f) ? '<h2 class="sec">\uD83D\uDE90 Pickup at property</h2><div class="note" style="margin-bottom:8px">This fob is still at ' + esc(propName(f.prop)) + '.</div><button class="btn btn-gold" onclick="pickUpFob(\'' + f.uid + '\')">\uD83D\uDE90 Pick up at ' + esc(f.prop) + '</button>' : ''))
+    +"<h2 class='sec'>Take out of service</h2>"
+    +'<div class="note" style="margin-bottom:8px">Trash this fob \u2014 it is out of service for good. The record stays on file for one year under Search discarded fobs, and the fob can be restored from this page.</div>'
+    +(f.discardedAt
+      ? '<div style="background:#F7FAFC;border:1.5px solid #A0AEC0;border-radius:9px;padding:10px 12px;font-weight:700;margin:8px 0;color:#2D3748">\uD83D\uDDD1 Discarded ' + esc(fmtD(f.discardedAt)) + ' \u2014 record kept on file until ' + esc(fmtD(fobFileUntil(f))) + '</div><button class="btn btn-ghost" onclick="restoreFob(\''+f.uid+'\')">\u21A9 Restore fob (not discarded)</button>'
+      : '<button class="btn btn-danger" onclick="discardFob(\''+f.uid+'\')">\uD83D\uDDD1 Trash fob \u2014 out of service</button>')
     +'</div><div class="fdpane" id="fdpane-ship"'+(startPane==='ship'?'':' style="display:none"')+'>'
     +"<h2 class='sec'>Warranty clock</h2>"
     +'<label>In service date</label><input type="date" id="fd-service" value="'+esc(f.inService||"")+'">'
@@ -1553,6 +1558,8 @@ window.restoreFob = u=>{
   toast("Fob restored");
 };
 window.delFob = u=>{
+  const _df = S.fobs.find(x=>x.uid===u);
+  if(_df && _df.discardedAt && new Date() < new Date(fobFileUntil(_df))){ toast("\uD83D\uDDD1 Trashed fobs stay on file for one year \u2014 this record is kept until " + fmtD(fobFileUntil(_df))); return; }
   if(!confirm("Delete this fob and its history?")) return;
   S.fobs=S.fobs.filter(x=>x.uid!==u); save(); closeSheet(); render();
 };
