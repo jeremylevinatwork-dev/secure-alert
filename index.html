@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-build="fob-20261022-1032">
+<html lang="en" data-build="fob-20261022-1055">
 <head>
 <meta charset="UTF-8">
 <meta name="mobile-web-app-capable" content="yes">
@@ -630,7 +630,7 @@ function fobFileUntil(f){
 }
 function discardLine(f){
   if(!fobIsDiscarded(f)) return "";
-  return '<br><span style="color:#4a5568;font-weight:700">\uD83D\uDDD1 Discarded ' + esc(fmtD(f.discardedAt)) + ' \u00B7 on file until ' + esc(fmtD(fobFileUntil(f))) + '</span>';
+  return '<br><span style="color:#4a5568;font-weight:700">\uD83D\uDDD1 Discarded ' + esc(fmtD(f.discardedAt)) + ' \u00B7 on file until ' + esc(fmtD(fobFileUntil(f))) + (f.remadeAt ? ' \u00B7 \uD83C\uDFF7 tag remade ' + esc(fmtD(f.remadeAt)) : (f.num ? ' \u00B7 \uD83C\uDFF7 tag ' + esc(f.num) + ' to remake' : '')) + '</span>';
 }
 function fobCharge(f){
   if(f.replacement) return 0;
@@ -989,6 +989,7 @@ function renderFobs(){
       +'<div style="display:flex;gap:8px;margin:2px 0 10px;width:100%;"><button class="btn btn-gold" style="flex:1" onclick="printFobList()">🖨 Print list</button><button class="btn btn-ghost" style="flex:1" onclick="emailFobList()">✉ Email list</button></div>'
     +'<div style="display:flex;gap:8px;margin:0 0 10px;width:100%;"><button class="btn btn-ghost" style="flex:1" onclick="toggleDiscardedView()">\uD83D\uDDD1 '+(fobDiscarded ? 'Back to all fobs' : 'Search discarded fobs')+' ('+S.fobs.filter(f=>f.discardedAt).length+' on file)</button></div>'
   if(fobDiscarded) h += '<div style="margin:2px 0 10px"><button class="chip active" onclick="toggleDiscardedView()">Showing: discarded fobs \u2014 kept on file for one year \u2715</button></div>';
+  if(fobDiscarded){ const _remake = list.filter(f=>f.num && !f.remadeAt); if(_remake.length) h += '<div class="card" style="border:2px solid #c9a227"><h3 style="margin-bottom:4px">\uD83C\uDFF7 Tag numbers to remake \u2014 ' + _remake.length + '</h3><div class="note" style="margin-bottom:8px">These tag numbers came off trashed fobs. Make a new tag for each one, then tap Remade.</div>' + _remake.map(f=>'<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:7px 2px;border-bottom:1px solid #EDF0F4"><span><span style="display:inline-block;background:#1a202c;color:#fff;font-weight:800;border-radius:6px;padding:2px 10px;font-size:16px">' + esc(f.num) + '</span> <b>' + esc(propName(f.prop)) + '</b> <span class="note">' + esc(f.fobId) + ' \u00B7 trashed ' + esc(fmtD(f.discardedAt)) + '</span></span><button class="btn btn-gold btn-sm" style="width:auto;margin:0" onclick="markTagRemade(\'' + f.uid + '\')">\u2713 Remade</button></div>').join('') + '</div>'; }
   if(fobStatusSet) h += '<div style="margin:2px 0 10px"><button class="chip active" onclick="clearFobStatusSet()">Showing: Need attention \u2715</button></div>';
   if(fobSentProp) h += '<div style="margin:2px 0 10px"><button class="chip active" onclick="clearFobSentProp()">Showing: '+(fobSentProp==="ALL" ? "All hotels" : esc(fobSentProp))+' \u2014 submitted to SecurAlert \u2713 only \u2715</button></div>';
   if(fobNotSent) h += '<div style="margin:2px 0 10px"><button class="chip active" onclick="clearFobNotSent()">Showing: not yet submitted \u2715</button></div>';
@@ -1127,6 +1128,7 @@ window.fdTab = name=>{
 window.fobDetail = u=>{
   const f=S.fobs.find(x=>x.uid===u); if(!f) return;
   const wi = warrantyInfo(f);
+  const tcN = f.sentRpt ? ((((S.tickets || []).find(x=>x.rpt===f.sentRpt) || {}).comments) || []).length : 0;
   const startPane = window._fdPane || 'details'; window._fdPane = null;
   let h='<h2>'+esc(f.fobId)+'</h2><div class="sub"><span class="pchip">'+esc(propName(f.prop))+"</span> "+statusBadge(f.status)+alsoBadges(f)+(f.sentToVendor?'<span class="sentmark" title="Sent to SecurAlert — waiting for response">\u2713</span>':"")+"</div>"
     +(f.replacement?'<div class="kv"><span>Billing</span><b>Replacement \u2014 no charge</b></div>':"")
@@ -1138,7 +1140,7 @@ window.fobDetail = u=>{
     +'<div class="kv"><span>In service</span><b>'+(f.inService?fmtD(f.inService):"\u2014 not set")+"</b></div>"
     +(wi?'<div class="kv"><span>Warranty</span><b>'+(wi.out?'<span style="color:#B3261E;font-weight:800">Not Under Warranty 1 Year</span>':(wi.state==="expired"?'<span style="color:#B3261E;font-weight:800">EXPIRED '+fmtD(wi.endStr)+'</span>':'Ends '+fmtD(wi.endStr)+' \u2014 '+wi.days+' days left'))+"</b></div>":"")
     +(f.sentToVendor?'<div class="kv"><span>SecurAlert</span><b class="sentline">\u2713 Sent '+esc(f.sentWhen||'')+' — waiting for response'+(f.sentRpt?' ('+esc(f.sentRpt)+')':'')+'</b></div>':"")
-    +(f.sentRpt ? '<button class="btn btn-ghost btn-sm" style="width:auto" onclick="openTicket(\'' + f.sentRpt + '\')">\uD83C\uDFAB Open ticket</button>' : "")
+    +(f.sentRpt ? '<button class="btn btn-ghost btn-sm" style="width:auto" onclick="openTicket(\'' + f.sentRpt + '\')">\uD83C\uDFAB Open ticket' + (tcN ? ' \u00B7 \uD83D\uDCAC ' + tcN : '') + '</button>' : "")
     +(followInfo(f)?'<div class="kv"><span>Follow-up</span><b>' + (followInfo(f).overdue ? '<span style="color:#B3261E;font-weight:800">\u26A0 2-WEEK CHECK DUE \u2014 submitted '+esc(f.sentWhen||'')+', no reply yet ('+followInfo(f).days+' days)</span>' : '2-week check on '+followInfo(f).dueStr) + '</b></div>':"")
         +(f.shipTracking?'<div class="kv"><span>FedEx</span><b>Shipped '+(f.shipWhen?esc(fmtDT(f.shipWhen)):'')+' \u2014 <a href="https://www.fedex.com/fedextrack/?trknbr='+encodeURIComponent(f.shipTracking)+'" target="_blank" rel="noopener">'+esc(f.shipTracking)+'</a></b></div>'+(f.receivedAt?'<div class="kv"><span>Received</span><b style="color:#276749">\u2713 '+esc(fmtDT(f.receivedAt))+(f.receivedBy?' \u2014 '+esc(f.receivedBy):'')+'</b></div>':""):"")
     +(f.notes?'<div class="kv"><span>Notes</span><b>'+esc(f.notes)+"</b></div>":"")
@@ -1397,6 +1399,7 @@ function ticketRec(rpt){
   let t = S.tickets.find(x=>x.rpt === rpt);
   if(!t){ t = { rpt: rpt, files: [] }; S.tickets.push(t); }
   if(!Array.isArray(t.files)) t.files = [];
+  if(!Array.isArray(t.comments)) t.comments = [];
   return t;
 }
 function ticketFobs(rpt){ return S.fobs.filter(f=> (f.sentRpt || (f.prop + '|' + (f.sentWhen || ''))) === rpt); }
@@ -1406,6 +1409,7 @@ window.openTicket = (rpt)=>{
   const f0 = g[0];
   const t = (S.tickets || []).find(x=>x.rpt === rpt);
   const files = t && t.files ? t.files : [];
+  const comments = t && t.comments ? t.comments : [];
   const shipN = g.filter(x=>x.shipTracking).length;
   const nwN = g.filter(x=>fobReturnedNW(x)).length;
   const overdue = g.filter(x=>{ const fi = followInfo(x); return fi && fi.overdue; }).length;
@@ -1421,8 +1425,20 @@ window.openTicket = (rpt)=>{
     + "<h2 class='sec'>\uD83D\uDCCE Files on this ticket</h2>"
     + (files.length ? files.map((dc, i)=>'<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:7px 2px;border-bottom:1px solid #EDF0F4"><span style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + ((dc.type || "").indexOf("image/") === 0 ? '\uD83D\uDDBC ' : '\uD83D\uDCC4 ') + esc(dc.name || "File") + '</span><button class="btn btn-ghost btn-sm" style="width:auto;margin:0" onclick="viewTicketFile(\'' + rpt + '\',' + i + ')">View</button></div>').join('') : '<div class="note">No files yet \u2014 when SecurAlert emails the quote, save the file from the email and attach it here.</div>')
     + '<input type="file" id="tf-file" accept="image/*,.pdf,.doc,.docx" multiple style="display:none" onchange="ticketFilePick(this,\'' + rpt + '\')"><button class="btn btn-ghost" onclick="document.getElementById(\'tf-file\').click()">\uD83D\uDCCE Attach file (quote from SecurAlert)</button>'
+    + "<h2 class='sec'>\uD83D\uDCAC Comments \u2014 live for the whole team</h2>"
+    + (comments.length ? comments.map(c=>'<div style="padding:8px 2px;border-bottom:1px solid #EDF0F4"><b>' + esc(c.by || 'Team') + '</b> <span class="note">' + esc(fmtDT(c.t)) + '</span><br>' + esc(c.text) + '</div>').join('') : '<div class="note">No comments yet \u2014 post an update and everyone on the team sees it here.</div>')
+    + '<input type="text" id="tc-text" placeholder="Write a comment..." onkeydown="if(event.key===\'Enter\'){addTicketComment(\'' + rpt + '\')}">'
+    + '<button class="btn btn-gold" onclick="addTicketComment(\'' + rpt + '\')">\uD83D\uDCAC Post comment</button>'
     + '<button class="btn btn-ghost" onclick="closeSheet()">Close</button>';
   openSheet(h);
+};
+window.addTicketComment = (rpt)=>{
+  const el = document.getElementById('tc-text');
+  const text = ((el && el.value) || '').trim();
+  if(!text){ toast('Write a comment first'); return; }
+  const t = ticketRec(rpt);
+  t.comments.push({ by: (S.session && S.session.name) || 'Team', t: new Date().toISOString(), text: text });
+  save(); openTicket(rpt); toast('Comment posted');
 };
 window.ticketFilePick = (input, rpt)=>{
   const t = ticketRec(rpt);
@@ -1542,13 +1558,21 @@ window.discardFob = u=>{
   const f = S.fobs.find(x=>x.uid===u); if(!f) return;
   const today = new Date().toISOString().slice(0, 10);
   const until = fobFileUntil({discardedAt: today});
-  if(!confirm("Discard fob " + f.fobId + "?\n\nThe fob is thrown away, but its record stays on file for one year (until " + fmtD(until) + "). You can find it any time under 'Search discarded fobs'.")) return;
+  if(!confirm("Discard fob " + f.fobId + "?\n\nThe fob is thrown away, but its record stays on file for one year (until " + fmtD(until) + "). You can find it any time under 'Search discarded fobs'." + (f.num ? "\n\nIts tag number " + f.num + " goes on the remake list so a new tag gets made." : ""))) return;
   f.discardedAt = today;
   delete fobSel[f.uid];
   f.hist = f.hist || [];
   f.hist.push({t: new Date().toISOString(), e: "Discarded \u2014 record kept on file for one year (until " + fmtD(until) + ")"});
   save(); closeSheet(); render();
   toast("Fob discarded \u2014 on file until " + fmtD(until));
+};
+window.markTagRemade = u=>{
+  const f = S.fobs.find(x=>x.uid===u); if(!f) return;
+  f.remadeAt = new Date().toISOString().slice(0, 10);
+  f.hist = f.hist || [];
+  f.hist.push({t: new Date().toISOString(), e: "Tag number " + (f.num || "") + " remade \u2014 new tag made"});
+  save(); render();
+  toast("\uD83C\uDFF7 Tag " + (f.num || "") + " marked remade");
 };
 window.restoreFob = u=>{
   const f = S.fobs.find(x=>x.uid===u); if(!f) return;
