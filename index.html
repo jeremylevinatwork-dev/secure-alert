@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-build="fob-20261022-0915">
+<html lang="en" data-build="fob-20261022-1032">
 <head>
 <meta charset="UTF-8">
 <meta name="mobile-web-app-capable" content="yes">
@@ -669,6 +669,7 @@ function renderDash(){
     +'<div class="tile tap'+(attn?' bad':'')+'" onclick="goFobs(\'\',\'ATTN\')"><div class="n">'+attn+'</div><div class="l">Need attention</div></div>'
     +'<div class="tile tap'+(n("Warranty")?' warn':'')+'" onclick="goFobs(\'Warranty\',\'\')"><div class="n">'+n("Warranty")+'</div><div class="l">Warranty</div></div>'
     +'<div class="tile tap" onclick="goHotelSent(\'ALL\')"><div class="n" style="color:#2b6cb0">'+S.fobs.filter(f=>!f.discardedAt && fobOutCount(f)).length+'</div><div class="l"><span class="sentmark">\u2713</span> Submitted</div></div>'
+    +'<div class="tile tap" onclick="goDiscarded()"><div class="n" style="color:#4a5568">'+S.fobs.filter(f=>f.discardedAt).length+'</div><div class="l">\uD83D\uDDD1 Trash \u2014 1 year only</div></div>'
     +"</div>"
 
   const fuList = S.fobs.map(f=>({f:f, fi:followInfo(f)})).filter(x=>x.fi && !x.f.discardedAt);
