@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-build="fob-20261024-1149">
+<html lang="en" data-build="fob-20261024-1345">
 <head>
 <meta charset="UTF-8">
 <meta name="mobile-web-app-capable" content="yes">
@@ -1210,6 +1210,7 @@ window.fobDetail = u=>{
     +(f.discardedAt
       ? '<div style="background:#F7FAFC;border:1.5px solid #A0AEC0;border-radius:9px;padding:10px 12px;font-weight:700;margin:8px 0;color:#2D3748">\uD83D\uDDD1 Discarded ' + esc(fmtD(f.discardedAt)) + ' \u2014 record kept on file until ' + esc(fmtD(fobFileUntil(f))) + '</div><button class="btn btn-ghost" onclick="restoreFob(\''+f.uid+'\')">\u21A9 Restore fob (not discarded)</button>'
       : '<button class="btn btn-danger" onclick="discardFob(\''+f.uid+'\')">\uD83D\uDDD1 Trash fob \u2014 out of service</button>')
+    +'<button class="btn btn-danger" onclick="delFob(\''+f.uid+'\')">Delete fob</button>'
     +'</div><div class="fdpane" id="fdpane-ship"'+(startPane==='ship'?'':' style="display:none"')+'>'
     +"<h2 class='sec'>Warranty clock</h2>"
     +'<label>In service date</label><input type="date" id="fd-service" value="'+esc(f.inService||"")+'">'
