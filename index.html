@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-build="fob-20261023-1753">
+<html lang="en" data-build="fob-20261024-1149">
 <head>
 <meta charset="UTF-8">
 <meta name="mobile-web-app-capable" content="yes">
@@ -402,6 +402,7 @@ window.editCustomerTicket = async function(idx){
 };
 let sbSyncTimer = null;
 var sbDirty = false; // true after a local save until its cloud push succeeds — pulls must never overwrite unsaved local work
+var sbPullTick = 0; // egress gate counter (stamp-check polls)
 function sbBadge(online, syncing){
   var el = document.getElementById('sb-sync-badge');
   if(!el){
@@ -459,6 +460,17 @@ async function sbPush(){
 }
 function recCount(d){ d = d || {}; return (d.fobs ? d.fobs.length : 0) + (d.subs ? d.subs.length : 0) + (d.docs ? d.docs.length : 0) + (d.beacons ? d.beacons.length : 0) + (d.arrivals ? d.arrivals.length : 0) + (d.tickets ? d.tickets.length : 0); }
 async function sbPull(){
+  sbPullTick++;
+  if(!sbDirty && (S._ts || 0) > 0 && sbPullTick % 20 !== 0){
+    try{
+      var sres = await fetch(SB_URL + '/rest/v1/app_records?id=eq.' + encodeURIComponent(SB_ROW_ID) + '&select=data->_ts', {headers:{'apikey':SB_KEY,'Authorization':'Bearer ' + SB_KEY}});
+      if(sres.ok){
+        var srows = await sres.json();
+        var cts = (srows && srows[0]) ? srows[0]._ts : null;
+        if(typeof cts === 'number' && cts === (S._ts || 0)){ sbBadge(true, false); return; }
+      }
+    }catch(e){}
+  }
   try{
     var res = await fetch(SB_URL + '/rest/v1/app_records?id=eq.' + encodeURIComponent(SB_ROW_ID) + '&select=data', {
       headers: {'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY}
