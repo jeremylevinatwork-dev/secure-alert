@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-build="fob-20261024-1440">
+<html lang="en" data-build="fob-20261025-1357">
 <head>
 <meta charset="UTF-8">
 <meta name="mobile-web-app-capable" content="yes">
@@ -981,7 +981,7 @@ window.printAllSubmitted = ()=>{
     + rows.map((f, i)=>'<tr><td>' + (i + 1) + '</td><td><b>' + esc(f.fobId) + '</b></td><td>' + esc(f.num || '\u2014') + '</td><td>' + esc(propName(f.prop)) + '</td><td>' + esc(fobProblem(f)) + '</td><td>' + esc(f.dept || '\u2014') + '</td><td>' + esc(f.staff || '\u2014') + (f.shift ? ' (' + esc(f.shift) + ')' : '') + '</td><td>' + esc(f.battery || '\u2014') + '</td><td>' + esc(f.sentRpt || '\u2014') + '</td><td>' + (f.shipTracking ? 'Shipped \u00B7 FedEx ' + esc(f.shipTracking) : 'Waiting for reply') + '</td></tr>').join('')
     + '</table>'
     + '<div style="margin-top:26px;font-size:13px">Printed by: ______________________________ &nbsp;&nbsp; Date/Time: ______________________________</div>'
-    + '<div class="foot">Produced by: JHNL Security Tech</div>';
+    + '';
   printReport('Submitted to SecurAlert \u2014 all properties', body);
 };
 window.printSelectedFobs = ()=>{
@@ -999,7 +999,7 @@ window.printSelectedFobs = ()=>{
     const msent = sel.filter(f=>f.sentToVendor);
     if(msent.length) mbody += '<p style="font-size:13px">\u2713 Already sent to SecurAlert: ' + msent.length + ' of ' + sel.length + ' fobs</p>';
     mbody += '<div style="margin-top:26px;font-size:13px">Sent by: ______________________________ &nbsp;&nbsp; Date/Time: ______________________________</div>'
-      + '<div class="foot">Produced by: JHNL Security Tech</div>';
+      + '';
     printReport('Fob submission \u2014 all properties', mbody);
     return;
   }
@@ -1012,7 +1012,7 @@ window.printSelectedFobs = ()=>{
   const sent = sel.filter(f=>f.sentToVendor);
   if(sent.length) body += '<p style="font-size:13px">\u2713 Already sent to SecurAlert: ' + sent.map(f=>esc(f.fobId) + ' (' + esc(f.sentWhen || '') + (f.sentRpt ? ' \u00B7 ' + esc(f.sentRpt) : '') + ')').join(', ') + '</p>';
   body += '<div style="margin-top:26px;font-size:13px">Sent by: ______________________________ &nbsp;&nbsp; Date/Time: ______________________________</div>'
-    + '<div class="foot">Produced by: JHNL Security Tech</div>';
+    + '';
   printReport('Fob submission \u2014 ' + propName(sel[0].prop), body);
 };
 function renderFobs(){
@@ -1629,7 +1629,7 @@ window.printPickupList = ()=>{
       + '</table>';
   });
   body += '<div style="margin-top:26px;font-size:13px">Picked up by: ______________________________ &nbsp;&nbsp; Date/Time: ______________________________</div>'
-    + '<div class="foot">Produced by: JHNL Security Tech</div>';
+    + '';
   printReport('Fob pickup list', body);
 };
 window.discardFob = u=>{
@@ -2976,7 +2976,7 @@ window.printBeacon = u=>{
       + (b.photo && b.photo.data && (b.photo.type||"").indexOf("image/")===0 ? '<div style="margin-top:16px"><img src="' + b.photo.data + '" style="max-width:420px;border-radius:8px"></div>' : "")
       + '<h2 style="margin-top:22px;color:#222;font-weight:bold">History</h2>'
       + ((b.hist||[]).map(ev=>'<div style="font-size:15px;padding:3px 0;border-bottom:1px solid #eee">' + esc(ev.e) + ' \u2014 ' + esc(fmtDT(ev.t)) + '</div>').join("") || '<div>No history yet.</div>')
-      + '<div class="foot">Produced by: JHNL Security Tech</div>';
+      + '';
     printReport("Beacon sheet \u2014 " + b.beaconId, body);
   };
   if(b.lat && b.lng){ toast('Building map\u2026'); beaconMapImg(b.lat, b.lng).then(build); }
@@ -3005,7 +3005,7 @@ window.printBeaconList = ()=>{
       + '</table>';
   });
   if(!list.length) body += '<p>No beacons match the current filter.</p>';
-  body += '<div class="foot">Produced by: JHNL Security Tech</div>';
+  body += '';
   printReport("Beacons report" + (picked.length ? " \u2014 " + list.length + " selected" : ""), body);
 };
 window.emailBeaconList = ()=>{
@@ -3078,7 +3078,7 @@ window.printFobList = ()=>{
       + '</table>';
   });
   if(!list.length) body += '<p>No fobs match the current filter.</p>';
-  body += '<div class="foot">Produced by: JHNL Security Tech</div>';
+  body += '';
   printReport("Fobs report", body);
 };
 window.emailFobList = ()=>{
@@ -3151,7 +3151,7 @@ function arrivalsReportBody(){
     });
     h += '</table>';
   });
-  h += '<div class="foot">Loews Secure Alert Tracking \u2014 new fob arrivals from SecurAlert. Power by: NDL systems tech \u00B7 Produced by: JHNL Security Tech</div>';
+  h += '<div class="foot">Loews Secure Alert Tracking \u2014 new fob arrivals from SecurAlert. Power by: NDL systems tech</div>';
   return h;
 }
 window.printArrivalsReport = ()=>{ printReport("New Fob Arrivals", arrivalsReportBody()); };
