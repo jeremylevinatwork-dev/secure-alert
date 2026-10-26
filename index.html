@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-build="fob-20261026-1150">
+<html lang="en" data-build="fob-20261026-1458">
 <head>
 <meta charset="UTF-8">
 <meta name="mobile-web-app-capable" content="yes">
@@ -527,7 +527,7 @@ try{
     S.session = {name: portalUser, viaPortal: true};
   }
 }catch(e){}
-let filter = "ALL", fobSearch = "", subSearch = "", arrSearch = "", tab = "dash", fobStatusSet = null, fobDiscarded = false;
+let filter = "ALL", fobSearch = "", subSearch = "", arrSearch = "", tab = "dash", fobStatusSet = null, fobDiscarded = false, ctSearch = "";
 let fobDate = "";
 function dstrToYmd(s){ if(!s) return ""; s = String(s); if(/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0, 10); const m = s.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/); return m ? m[3] + "-" + String(m[1]).padStart(2, "0") + "-" + String(m[2]).padStart(2, "0") : ""; }
 function fobOnDate(f, ymd){ if(dstrToYmd(f.sentWhen) === ymd) return true; if(dstrToYmd(f.shipWhen) === ymd) return true; if(dstrToYmd(f.receivedAt) === ymd) return true; if(f.inService === ymd) return true; return (f.hist || []).some(en => dstrToYmd(en.t) === ymd); }
@@ -627,8 +627,9 @@ window.clearFobStatusSet = ()=>{ fobStatusSet = null; renderFobs(); };
 window.clearFobSentProp = ()=>{ fobSentProp = null; renderFobs(); };
 window.goHotelSent = (code)=>{ fobDiscarded = false; fobSentProp = code; fobNotSent = false; fobDate = ""; fobStatusSet = null; fobSearch = ""; goTab("fobs"); };
 window.goFobsNotSent = ()=>{ fobDiscarded = false; fobNotSent = true; fobSentProp = null; fobStatusSet = null; fobSearch = ""; goTab("fobs"); };
-window.goDiscarded = ()=>{ fobDiscarded = true; fobSentProp = null; fobNotSent = false; fobDate = ""; fobStatusSet = null; goTab("fobs"); };
-window.toggleDiscardedView = ()=>{ fobDiscarded = !fobDiscarded; if(fobDiscarded){ fobSentProp = null; fobNotSent = false; fobStatusSet = null; } render(); };
+window.goDiscarded = ()=>{ fobDiscarded = true; fobSentProp = null; fobNotSent = false; fobDate = ""; fobStatusSet = null; fobSearch = ""; filter = "ALL"; goTab("fobs"); renderPropbar(); };
+window.showAllDiscarded = ()=>{ filter = "ALL"; fobSearch = ""; renderPropbar(); render(); };
+window.toggleDiscardedView = ()=>{ fobDiscarded = !fobDiscarded; if(fobDiscarded){ fobSentProp = null; fobNotSent = false; fobStatusSet = null; fobSearch = ""; filter = "ALL"; renderPropbar(); } render(); };
 window.clearFobNotSent = ()=>{ fobNotSent = false; renderFobs(); };
 
 /* ---------- tabs ---------- */
@@ -808,11 +809,11 @@ h += '<div class="card closed"><h3 onclick="toggleCard(this)" style="cursor:poin
     ? ' <span style="background:#cc0000;color:white;font-weight:bold;padding:2px 10px;border-radius:12px;font-size:15px;">'+ctCount+'</span>'
     : ' <span class="note">(0)</span>';
   h += '<div class="card closed"><h3 onclick="toggleCard(this)" style="cursor:pointer">Customer Fob Tickets'+ctBadge+' <span class="chev" style="float:right">▸</span></h3>';
-  h += '<input id="ctSearch" placeholder="Search tickets (ID, hotel, fob, issue)..." value="'+esc(window.ctSearch||'')+'" oninput="window.ctSearch=this.value;renderDash();" style="width:100%;padding:10px;margin:8px 0;border:1px solid #ccc;border-radius:8px;font-size:16.5px;">';
+  h += '<input id="ctSearch" placeholder="Search tickets (ID, hotel, fob, issue)..." value="'+esc(ctSearch)+'" oninput="ctSearch=this.value;renderDash();" style="width:100%;padding:10px;margin:8px 0;border:1px solid #ccc;border-radius:8px;font-size:16.5px;">';
   if(!customerTickets.length){
     h += '<div class="empty">No customer tickets yet.</div>';
   } else {
-    const q = (window.ctSearch||'').toLowerCase();
+    const q = ctSearch.toLowerCase();
     const filtered = customerTickets.filter(t => !q || (t.id+' '+t.hotel+' '+t.fobId+' '+t.issue+' '+t.approvedBy).toLowerCase().includes(q));
     h += '<div class="tscroll"><table class="props"><tr><th>Ticket</th><th>Hotel</th><th>Fob ID</th><th>Issue</th><th>Cost</th><th>Approved</th><th>Seen</th><th></th></tr>';
     // Show newest first
@@ -1060,7 +1061,7 @@ function renderFobs(){
       +((f.dept||f.staff)?"<br>":"")
       +"Battery/test: "+fmtD(f.battery)+(out?'<br><span class="sentline">\u2713 Sent to SecurAlert '+esc(f.sentWhen||'')+' \u2014 waiting for response</span>':'')+warrantyLine(f)+followLine(f)+discardLine(f)+"</div></div></div></div>";
   }
-  if(!list.length && !matchingTickets.length) h += fobDiscarded ? '<div class="card"><div class="empty">No discarded fobs on file.</div></div>' : '<div class="card"><div class="empty">No fobs here yet.<br><br><button class="btn btn-primary btn-sm" onclick="addFobForm()">+ Add your first fob</button></div></div>';
+  if(!list.length && !matchingTickets.length) h += fobDiscarded ? (S.fobs.some(f=>f.discardedAt) ? '<div class="card"><div class="empty">Nothing in the trash matches the current property / search filter.<br><br><button class="btn btn-primary btn-sm" onclick="showAllDiscarded()">Show all discarded fobs</button></div></div>' : '<div class="card"><div class="empty">No discarded fobs on file.</div></div>') : '<div class="card"><div class="empty">No fobs here yet.<br><br><button class="btn btn-primary btn-sm" onclick="addFobForm()">+ Add your first fob</button></div></div>';
   if(mainFobs.length){
     h += '<div class="cards2">';
     mainFobs.forEach(f=>{ h += fobCardHtml(f); });
