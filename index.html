@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-build="fob-20261026-1525">
+<html lang="en" data-build="fob-20261026-1558">
 <head>
 <meta charset="UTF-8">
 <meta name="mobile-web-app-capable" content="yes">
@@ -1607,7 +1607,7 @@ window.printTrashNums = ()=>{
   const list = S.fobs.filter(f=>f.discardedAt && f.num && ((window._trashSel && window._trashSel.size) ? window._trashSel.has(f.uid) : inFilter(f.prop)))
     .sort((a,b)=>String(a.num).localeCompare(String(b.num), undefined, {numeric:true}));
   if(!list.length){ toast('No fob numbers to print'); return; }
-  const body = PROPS.filter(p=>list.some(f=>f.prop===p)).map(p=>'<h2 style="margin:16px 0 8px">' + esc(propName(p)) + ' \u2014 ' + list.filter(f=>f.prop===p).length + '</h2><div style="display:flex;flex-wrap:wrap;gap:16px">'
+  const body = '<p style="font-size:14px;margin:0 0 6px">Printed ' + esc(todayISO()) + ' \u00B7 ' + esc(new Date().toLocaleTimeString()) + ' \u00B7 by ' + esc(fobSessionName() || '\u2014') + '</p>' + PROPS.filter(p=>list.some(f=>f.prop===p)).map(p=>'<h2 style="margin:16px 0 8px">' + esc(propName(p)) + ' \u2014 ' + list.filter(f=>f.prop===p).length + '</h2><div style="display:flex;flex-wrap:wrap;gap:16px">'
     + list.filter(f=>f.prop===p).map(f=>'<span style="display:inline-block;background:#1a202c;color:#fff;font-weight:800;border-radius:8px;padding:10px 22px;font-size:30px;letter-spacing:1px">' + esc(f.num) + '</span>').join('')
     + '</div>').join('');
   printReport('Fob numbers \u2014 trash' + ((window._trashSel && window._trashSel.size) ? ' \u2014 selected' : (filter!=="ALL" ? ' \u2014 ' + propName(filter) : '')), body);
@@ -1631,7 +1631,7 @@ window.printRemakeList = ()=>{
     _batch[p] = _no;
     S.tagPrints.push({no:_no, prop:p, date:_today, by:(typeof fobSessionName==='function' ? (fobSessionName() || '') : ''), count:_byProp[p].length, nums:_byProp[p].map(f=>f.num)});
   });
-  const body = PROPS.filter(p=>_byProp[p]).map(p=>'<h2 style="margin:16px 0 4px">' + esc(propName(p)) + '</h2><p style="font-size:14px;margin:0 0 8px">Tracking #: <b>' + esc(_batch[p]) + '</b> \u00B7 ' + _byProp[p].length + ' tag' + (_byProp[p].length === 1 ? '' : 's') + ' \u00B7 ' + esc(_today) + '</p><div style="display:flex;flex-wrap:wrap;gap:16px">'
+  const body = '<p style="font-size:14px;margin:0 0 6px">Printed ' + esc(todayISO()) + ' \u00B7 ' + esc(new Date().toLocaleTimeString()) + ' \u00B7 by ' + esc(fobSessionName() || '\u2014') + '</p>' + PROPS.filter(p=>_byProp[p]).map(p=>'<h2 style="margin:16px 0 4px">' + esc(propName(p)) + '</h2><p style="font-size:14px;margin:0 0 8px">Tracking #: <b>' + esc(_batch[p]) + '</b> \u00B7 ' + _byProp[p].length + ' tag' + (_byProp[p].length === 1 ? '' : 's') + ' \u00B7 ' + esc(_today) + '</p><div style="display:flex;flex-wrap:wrap;gap:16px">'
     + _byProp[p].map(f=>'<span style="display:inline-block;background:#1a202c;color:#fff;font-weight:800;border-radius:8px;padding:10px 22px;font-size:30px;letter-spacing:1px">' + esc(f.num) + '</span>').join('')
     + '</div>').join('');
   printReport('Tag numbers to remake' + (set.length && set.every(f=>f.prop===set[0].prop) ? ' \u2014 ' + propName(set[0].prop) : ''), body);
