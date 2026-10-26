@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-build="fob-20261026-1558">
+<html lang="en" data-build="fob-20261026-1602">
 <head>
 <meta charset="UTF-8">
 <meta name="mobile-web-app-capable" content="yes">
@@ -702,6 +702,7 @@ function renderDash(){
     +'<div class="tile tap'+(n("Warranty")?' warn':'')+'" onclick="goFobs(\'Warranty\',\'\')"><div class="n">'+n("Warranty")+'</div><div class="l">Warranty</div></div>'
     +'<div class="tile tap" onclick="goHotelSent(\'ALL\')"><div class="n" style="color:#2b6cb0">'+S.fobs.filter(f=>!f.discardedAt && fobOutCount(f)).length+'</div><div class="l"><span class="sentmark">\u2713</span> Submitted</div></div>'
     +'<div class="tile tap" onclick="goDiscarded()"><div class="n" style="color:#4a5568">'+S.fobs.filter(f=>f.discardedAt).length+'</div><div class="l">\uD83D\uDDD1 Trash \u2014 1 year only</div></div>'
+    +'<div class="tile tap" onclick="showPrintedFobs()"><div class="n" style="color:#1A365D">'+(S.tagPrints||[]).reduce((a,t)=>a+(t.count||0),0)+'</div><div class="l">\uD83D\uDDA8 Printed fobs</div></div>'
     +"</div>"
 
   const fuList = S.fobs.map(f=>({f:f, fi:followInfo(f)})).filter(x=>x.fi && !x.f.discardedAt);
@@ -1603,14 +1604,48 @@ window.toggleTrashPick = (u, ev)=>{ if(ev) ev.stopPropagation();
 };
 window.trashSelAll = ()=>{ window._trashSel = window._trashSel || new Set(); (window._trashUids || []).forEach(u=>window._trashSel.add(u)); render(); };
 window.trashSelNone = ()=>{ window._trashSel = new Set(); render(); };
+window.showPrintedFobs = ()=>{
+  const log = (S.tagPrints || []).slice().reverse();
+  let body = '';
+  if(!log.length) body = '<div class="empty">No fob numbers printed yet.</div>';
+  else {
+    const byProp = {};
+    log.forEach(t=>{ (byProp[t.prop] = byProp[t.prop] || []).push(t); });
+    body = PROPS.filter(p=>byProp[p]).map(p=>{
+      const rows = byProp[p];
+      const total = rows.reduce((a,t)=>a+(t.count||0),0);
+      return '<h2 style="margin:16px 0 8px">' + esc(propName(p)) + ' \u2014 ' + total + ' printed</h2>'
+        + rows.map(t=>'<p style="font-size:14px;margin:0 0 6px"><b>' + esc(t.no || '') + '</b> \u00B7 ' + (t.count || 0) + ' fob' + ((t.count||0) === 1 ? '' : 's') + ' \u00B7 ' + esc(t.dept || '\u2014') + ' \u00B7 ' + esc(t.date || '') + ' \u00B7 by ' + esc(t.by || '\u2014') + '</p>').join('');
+    }).join('');
+  }
+  printReport('Printed fobs by property', body);
+};
 window.printTrashNums = ()=>{
   const list = S.fobs.filter(f=>f.discardedAt && f.num && ((window._trashSel && window._trashSel.size) ? window._trashSel.has(f.uid) : inFilter(f.prop)))
     .sort((a,b)=>String(a.num).localeCompare(String(b.num), undefined, {numeric:true}));
   if(!list.length){ toast('No fob numbers to print'); return; }
-  const body = '<p style="font-size:14px;margin:0 0 6px">Printed ' + esc(todayISO()) + ' \u00B7 ' + esc(new Date().toLocaleTimeString()) + ' \u00B7 by ' + esc(fobSessionName() || '\u2014') + '</p>' + PROPS.filter(p=>list.some(f=>f.prop===p)).map(p=>'<h2 style="margin:16px 0 8px">' + esc(propName(p)) + ' \u2014 ' + list.filter(f=>f.prop===p).length + '</h2><div style="display:flex;flex-wrap:wrap;gap:16px">'
-    + list.filter(f=>f.prop===p).map(f=>'<span style="display:inline-block;background:#1a202c;color:#fff;font-weight:800;border-radius:8px;padding:10px 22px;font-size:30px;letter-spacing:1px">' + esc(f.num) + '</span>').join('')
+  const _today = new Date().toISOString().slice(0, 10);
+  const _ymd = _today.replace(/-/g, '');
+  S.tagPrints = S.tagPrints || [];
+  const _byProp = {};
+  list.forEach(f=>{ (_byProp[f.prop] = _byProp[f.prop] || []).push(f); });
+  const _batch = {};
+  const _by = (typeof fobSessionName==='function' ? (fobSessionName() || '') : '');
+  PROPS.filter(p=>_byProp[p]).forEach(p=>{
+    const _seq = S.tagPrints.filter(x=>x.prop===p).reduce((m,x)=>{ const mm = /-(\d+)$/.exec(x.no||''); return Math.max(m, mm ? parseInt(mm[1],10) : 0); }, 0) + 1;
+    const _no = 'TAG-' + p + '-' + _ymd + '-' + String(_seq).padStart(4, '0');
+    _batch[p] = _no;
+    const _byDept = {};
+    _byProp[p].forEach(f=>{ const _d = f.dept || ''; (_byDept[_d] = _byDept[_d] || []).push(f); });
+    Object.keys(_byDept).forEach(d=>{
+      S.tagPrints.push({no:_no, prop:p, dept:d, date:_today, by:_by, count:_byDept[d].length, nums:_byDept[d].map(f=>f.num)});
+    });
+  });
+  const body = '<p style="font-size:14px;margin:0 0 6px">Printed ' + esc(todayISO()) + ' \u00B7 ' + esc(new Date().toLocaleTimeString()) + ' \u00B7 by ' + esc(fobSessionName() || '\u2014') + '</p>' + PROPS.filter(p=>_byProp[p]).map(p=>'<h2 style="margin:16px 0 4px">' + esc(propName(p)) + ' \u2014 ' + _byProp[p].length + '</h2><p style="font-size:14px;margin:0 0 8px">Tracking #: <b>' + esc(_batch[p]) + '</b></p><div style="display:flex;flex-wrap:wrap;gap:16px">'
+    + _byProp[p].map(f=>'<span style="display:inline-block;background:#1a202c;color:#fff;font-weight:800;border-radius:8px;padding:10px 22px;font-size:30px;letter-spacing:1px">' + esc(f.num) + '</span>').join('')
     + '</div>').join('');
   printReport('Fob numbers \u2014 trash' + ((window._trashSel && window._trashSel.size) ? ' \u2014 selected' : (filter!=="ALL" ? ' \u2014 ' + propName(filter) : '')), body);
+  save();
 };
 window.printRemakeList = ()=>{
   let set = (window._remakeUids && window._remakeUids.length)
@@ -1627,9 +1662,14 @@ window.printRemakeList = ()=>{
   set.forEach(f=>{ (_byProp[f.prop] = _byProp[f.prop] || []).push(f); });
   const _batch = {};
   PROPS.filter(p=>_byProp[p]).forEach(p=>{
-    const _no = 'TAG-' + p + '-' + _ymd + '-' + String(S.tagPrints.filter(x=>x.prop===p).length + 1).padStart(4, '0');
+    const _seq = S.tagPrints.filter(x=>x.prop===p).reduce((m,x)=>{ const mm = /-(\d+)$/.exec(x.no||''); return Math.max(m, mm ? parseInt(mm[1],10) : 0); }, 0) + 1;
+    const _no = 'TAG-' + p + '-' + _ymd + '-' + String(_seq).padStart(4, '0');
     _batch[p] = _no;
-    S.tagPrints.push({no:_no, prop:p, date:_today, by:(typeof fobSessionName==='function' ? (fobSessionName() || '') : ''), count:_byProp[p].length, nums:_byProp[p].map(f=>f.num)});
+    const _byDept = {};
+    _byProp[p].forEach(f=>{ const _d = f.dept || ''; (_byDept[_d] = _byDept[_d] || []).push(f); });
+    Object.keys(_byDept).forEach(d=>{
+      S.tagPrints.push({no:_no, prop:p, dept:d, date:_today, by:(typeof fobSessionName==='function' ? (fobSessionName() || '') : ''), count:_byDept[d].length, nums:_byDept[d].map(f=>f.num)});
+    });
   });
   const body = '<p style="font-size:14px;margin:0 0 6px">Printed ' + esc(todayISO()) + ' \u00B7 ' + esc(new Date().toLocaleTimeString()) + ' \u00B7 by ' + esc(fobSessionName() || '\u2014') + '</p>' + PROPS.filter(p=>_byProp[p]).map(p=>'<h2 style="margin:16px 0 4px">' + esc(propName(p)) + '</h2><p style="font-size:14px;margin:0 0 8px">Tracking #: <b>' + esc(_batch[p]) + '</b> \u00B7 ' + _byProp[p].length + ' tag' + (_byProp[p].length === 1 ? '' : 's') + ' \u00B7 ' + esc(_today) + '</p><div style="display:flex;flex-wrap:wrap;gap:16px">'
     + _byProp[p].map(f=>'<span style="display:inline-block;background:#1a202c;color:#fff;font-weight:800;border-radius:8px;padding:10px 22px;font-size:30px;letter-spacing:1px">' + esc(f.num) + '</span>').join('')
