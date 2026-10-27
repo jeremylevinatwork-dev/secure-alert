@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-build="fob-20261027-1605">
+<html lang="en" data-build="fob-20261027-1630">
 <head>
 <meta charset="UTF-8">
 <meta name="mobile-web-app-capable" content="yes">
@@ -1624,6 +1624,64 @@ window.showPrintedFobs = ()=>{
   }
   printReport('Printed fobs by property', body);
 };
+function shipGroups(){
+  const groups = [];
+  const ships = (S.shipments || []).slice().sort((a, b)=>String(b.finalizedAt || b.createdAt || '').localeCompare(String(a.finalizedAt || a.createdAt || '')));
+  const byShip = {};
+  S.fobs.forEach(f=>{ if(f.shipId) (byShip[f.shipId] = byShip[f.shipId] || []).push(f); });
+  const shown = {};
+  const ff = f=>{ const o = {}; (f.files || []).forEach(x=>{ if(x && x.tag === 'FedEx') (o.list = o.list || []).push(x.name || 'FedEx file'); }); return o.list || []; };
+  ships.forEach(sh=>{
+    const members = byShip[sh.uid] || [];
+    members.forEach(f=>{ shown[f.uid] = 1; });
+    const fobFiles = {};
+    members.forEach(f=>{ fobFiles[f.uid] = ff(f); });
+    groups.push({ tracking: sh.tracking || '', fin: sh.status === 'finalized', when: sh.status === 'finalized' ? sh.finalizedAt : sh.createdAt, by: sh.status === 'finalized' ? sh.finalizedBy : sh.createdBy, members: members, shipFiles: (sh.files || []).map(x=>x.name || 'FedEx file'), fobFiles: fobFiles });
+  });
+  const legacy = {};
+  S.fobs.forEach(f=>{ if(!f.shipId && f.shipTracking) (legacy[f.shipTracking] = legacy[f.shipTracking] || []).push(f); });
+  Object.keys(legacy).forEach(trk=>{
+    const members = legacy[trk];
+    members.forEach(f=>{ shown[f.uid] = 1; });
+    const fobFiles = {};
+    members.forEach(f=>{ fobFiles[f.uid] = ff(f); });
+    groups.push({ tracking: trk, fin: true, when: members.map(f=>f.shipWhen || '').sort().pop() || '', by: '', members: members, shipFiles: [], fobFiles: fobFiles });
+  });
+  return groups;
+}
+window.printShippedFobs = ()=>{
+  const groups = shipGroups();
+  if(!groups.length){ toast('No FedEx shipments yet'); return; }
+  const now = new Date();
+  let body = '<h1>\uD83D\uDE9A FedEx shipments</h1>'
+    + '<h2>' + groups.length + ' shipment' + (groups.length > 1 ? 's' : '') + '<br>Date: ' + esc(todayISO()) + ' \u00B7 Time: ' + esc(now.toLocaleTimeString()) + ' \u00B7 Printed by ' + esc(fobSessionName() || '\u2014') + '</h2>';
+  groups.forEach(g=>{
+    body += '<h3 style="margin:14px 0 4px">\uD83D\uDCE6 ' + (g.tracking ? 'FedEx ' + esc(g.tracking) : 'Shipment') + ' \u2014 ' + (g.fin ? '\u2713 SHIPPED OUT' : 'BEING PREPARED') + '</h3>'
+      + '<div class="doc-meta">' + (g.fin ? 'Shipped out ' : 'Started ') + esc(fmtDT(g.when)) + (g.by ? ' \u00B7 by ' + esc(g.by) : '') + '</div>'
+      + '<table><tr><th>Fob ID</th><th>Tag #</th><th>Hotel</th><th>Received</th><th>Files</th></tr>'
+      + g.members.map(f=>'<tr><td>' + esc(f.fobId) + '</td><td>' + esc(f.num ? '#' + f.num : '\u2014') + '</td><td>' + esc(propName(f.prop)) + '</td><td>' + (f.receivedAt ? '\u2713' : '') + '</td><td>' + esc((g.fobFiles[f.uid] || []).join(', ') || '\u2014') + '</td></tr>').join('')
+      + '</table>'
+      + (g.shipFiles.length ? '<div class="doc-meta">Shipment files: ' + esc(g.shipFiles.join(', ')) + '</div>' : '');
+  });
+  printReport('FedEx shipments', body);
+};
+window.emailShippedFobs = ()=>{
+  const groups = shipGroups();
+  if(!groups.length){ toast('No FedEx shipments yet'); return; }
+  const lines = ['FedEx shipments \u2014 Secure Alert fobs sent to SecurAlert:', ''];
+  let mh = '<h3>FedEx shipments</h3>';
+  groups.forEach(g=>{
+    lines.push('Shipment' + (g.tracking ? ' \u2014 FedEx ' + g.tracking : '') + ' (' + (g.fin ? 'SHIPPED OUT' : 'BEING PREPARED') + ')');
+    lines.push((g.fin ? 'Shipped out: ' : 'Started: ') + fmtDT(g.when) + (g.by ? ' by ' + g.by : ''));
+    mh += '<p><b>Shipment' + (g.tracking ? ' \u2014 FedEx ' + esc(g.tracking) : '') + '</b> (' + (g.fin ? 'SHIPPED OUT' : 'BEING PREPARED') + ')<br>' + (g.fin ? 'Shipped out: ' : 'Started: ') + esc(fmtDT(g.when)) + (g.by ? ' by ' + esc(g.by) : '') + '</p>';
+    g.members.forEach(f=>{ lines.push('  ' + f.fobId + (f.num ? ' (#' + f.num + ')' : '') + ' \u2014 ' + propName(f.prop) + ((g.fobFiles[f.uid] || []).length ? ' \u2014 files: ' + g.fobFiles[f.uid].join(', ') : '')); });
+    mh += g.members.length ? '<ul>' + g.members.map(f=>'<li>' + esc(f.fobId) + (f.num ? ' (#' + esc(f.num) + ')' : '') + ' \u2014 ' + esc(propName(f.prop)) + ((g.fobFiles[f.uid] || []).length ? ' \u2014 files: ' + esc(g.fobFiles[f.uid].join(', ')) : '') + '</li>').join('') + '</ul>' : '<p>No fobs yet.</p>';
+    if(g.shipFiles.length){ lines.push('  Shipment files: ' + g.shipFiles.join(', ')); mh += '<p>Shipment files: ' + esc(g.shipFiles.join(', ')) + '</p>'; }
+    lines.push('');
+  });
+  window._mailHtml = mh;
+  composeMail('FedEx shipments \u2014 Secure Alert fobs (' + groups.length + ')', lines.join('\n'), 'ALL');
+};
 window.shipFilePick = (input, kind, u)=>{
   const target = kind === 'ship' ? (S.shipments || []).find(x=>x.uid===u) : S.fobs.find(x=>x.uid===u);
   if(!target) return;
@@ -1697,7 +1755,7 @@ window.showShippedFobs = ()=>{
     const fin = sh.status === 'finalized';
     cards += '<div class="card"><h3 style="margin-bottom:4px">\uD83D\uDCE6 Shipment' + (sh.tracking ? ' \u2014 FedEx <a href="https://www.fedex.com/fedextrack/?trknbr=' + encodeURIComponent(sh.tracking) + '" target="_blank" rel="noopener">' + esc(sh.tracking) + '</a>' : '') + '</h3>'
       + '<div style="margin:4px 0"><span style="display:inline-block;padding:3px 10px;border-radius:999px;font-size:12px;font-weight:800;' + (fin ? 'background:#c6f6d5;color:#276749' : 'background:#fefcbf;color:#975a16') + '">' + (fin ? '\u2713 SHIPPED OUT' : 'BEING PREPARED') + '</span></div>'
-      + '<div class="note">' + (fin ? 'Shipped out ' + esc(fmtD(sh.finalizedAt)) + (sh.finalizedBy ? ' by ' + esc(sh.finalizedBy) : '') : 'Started ' + esc(fmtD(sh.createdAt)) + (sh.createdBy ? ' by ' + esc(sh.createdBy) : '')) + '</div>'
+      + '<div class="note">' + (fin ? 'Shipped out ' + esc(fmtDT(sh.finalizedAt)) + (sh.finalizedBy ? ' by ' + esc(sh.finalizedBy) : '') : 'Started ' + esc(fmtDT(sh.createdAt)) + (sh.createdBy ? ' by ' + esc(sh.createdBy) : '')) + '</div>'
       + (members.length ? members.map(f=>fobRow('ship', f)).join('') : '<div class="note" style="padding:6px 2px">No fobs in this shipment yet.</div>')
       + ((sh.files || []).length ? '<div style="margin-top:8px;font-weight:700;font-size:13px">FedEx files</div>' + (sh.files || []).map((x, i)=>({x:x, i:i})).map(o=>'<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:6px 2px;border-bottom:1px solid #EDF0F4"><span style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">\uD83D\uDCC4 ' + esc(o.x.name || 'FedEx file') + '</span><span style="flex:0 0 auto"><button class="btn btn-ghost btn-sm" style="width:auto;margin:0" onclick="shipViewFile(\'ship\',\'' + sh.uid + '\',' + o.i + ')">View</button></span></div>').join('') : '')
       + '<div style="margin-top:8px"><input type="file" id="ss-' + sh.uid + '" accept="image/*,.pdf,.doc,.docx" style="display:none" onchange="shipFilePick(this,\'ship\',\'' + sh.uid + '\')"><button class="btn btn-ghost btn-sm" style="width:auto;margin:0" onclick="document.getElementById(\'ss-' + sh.uid + '\').click()">\uD83D\uDCCE Add file</button></div></div>';
@@ -1710,10 +1768,11 @@ window.showShippedFobs = ()=>{
     const when = members.map(f=>f.shipWhen || '').sort().pop();
     cards += '<div class="card"><h3 style="margin-bottom:4px">\uD83D\uDCE6 Shipment \u2014 FedEx <a href="https://www.fedex.com/fedextrack/?trknbr=' + encodeURIComponent(trk) + '" target="_blank" rel="noopener">' + esc(trk) + '</a></h3>'
       + '<div style="margin:4px 0"><span style="display:inline-block;padding:3px 10px;border-radius:999px;font-size:12px;font-weight:800;background:#c6f6d5;color:#276749">\u2713 SHIPPED OUT</span></div>'
-      + (when ? '<div class="note">Shipped out ' + esc(when) + '</div>' : '')
+      + (when ? '<div class="note">Shipped out ' + esc(fmtDT(when)) + '</div>' : '')
       + members.map(f=>fobRow('legacy', f)).join('') + '</div>';
   });
-  let h = '<h2>\uD83D\uDE9A Shipped \u2014 FedEx</h2><div class="sub">Every fob shipment to SecurAlert with its FedEx tracking and file copies.</div>';
+  let h = '<h2>\uD83D\uDE9A Shipped \u2014 FedEx</h2><div class="sub">Every fob shipment to SecurAlert with its FedEx tracking and file copies.</div>'
+    + '<div style="display:flex;gap:8px;margin:10px 0"><button class="btn btn-gold btn-sm" style="width:auto;margin:0" onclick="printShippedFobs()">\uD83D\uDDA8 Print</button><button class="btn btn-sm" style="width:auto;margin:0" onclick="emailShippedFobs()">\u2709\uFE0F Email</button></div>';
   h += cards || '<div class="card"><div class="empty">No FedEx shipments yet.</div></div>';
   h += '<button class="btn btn-ghost" onclick="closeSheet()">Close</button>';
   openSheet(h);
