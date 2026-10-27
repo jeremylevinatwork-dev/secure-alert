@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-build="fob-20261027-1630">
+<html lang="en" data-build="fob-20261027-1650">
 <head>
 <meta charset="UTF-8">
 <meta name="mobile-web-app-capable" content="yes">
@@ -900,7 +900,7 @@ function mailApprovalCard(){
   if(!pend.length) return '';
   let h = '<div style="background:#fff5eb;border:2px solid #dd6b20;border-radius:14px;padding:14px;margin-bottom:12px"><h2 class="sec" style="margin-top:0;color:#9c4221">\uD83D\uDCEC Email approvals waiting ('+pend.length+')</h2>';
   pend.forEach(q=>{
-    h += '<div style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:10px 12px;margin-bottom:8px"><b>'+esc(q.mail.subj||'(no subject)')+'</b><div class="note">From: '+esc(q.by)+' \u00B7 '+new Date(q.ts).toLocaleString()+'<br>To: '+esc(q.kind==='test' ? 'TEST to Jeremy Gmail' : (q.jobs? q.jobs.map(j=>j.label).join(' + ') : q.mail.to))+'</div>'
+    h += '<div style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:10px 12px;margin-bottom:8px"><b>'+esc(q.mail.subj||'(no subject)')+'</b><div class="note">From: '+esc(q.by)+' \u00B7 '+new Date(q.ts).toLocaleString()+'<br>To: Jeremy Levin only <span style="color:#9c4221">(picked: '+esc(q.kind==='test' ? 'TEST to Jeremy Gmail' : (q.jobs? q.jobs.map(j=>j.label).join(' + ') : q.mail.to))+')</span></div>'
       +'<div style="display:flex;gap:8px;margin-top:8px"><button class="btn btn-gold btn-sm" style="width:auto;margin:0" onclick="approveMail(\''+q.uid+'\')">\u2713 Approve &amp; send</button><button class="btn btn-sm" style="width:auto;margin:0" onclick="dismissMail(\''+q.uid+'\')">Dismiss</button></div></div>';
   });
   return h + '</div>';
@@ -908,7 +908,7 @@ function mailApprovalCard(){
 window.approveMail = uid => {
   const q = (S.mailQueue||[]).find(x=>x.uid===uid); if(!q) return;
   lastMail = { subj:q.mail.subj, body:q.mail.body, htmlBody:q.mail.htmlBody||'', to:q.mail.to, label:q.mail.label||'', template:q.mail.template||EJ_TEMPLATE, rpt:q.mail.rpt||'' };
-  const jobs = (q.jobs && q.jobs.length) ? q.jobs : [{template:lastMail.template||EJ_TEMPLATE, to:lastMail.to, label:lastMail.label||'Support'}];
+  const jobs = ((q.jobs && q.jobs.length) ? q.jobs : [{template:lastMail.template||EJ_TEMPLATE, to:lastMail.to, label:lastMail.label||'Support'}]).map(j=>({ ...j, to: MAIL_TO, label: 'Jeremy Levin' }));
   const sendOne = j => fetch("https://api.emailjs.com/api/v1.0/email/send",{method:"POST",headers:{"Content-Type":"application/json"},
     body:JSON.stringify({service_id:EJ_SERVICE,template_id:(lastMail.htmlBody && j.template===EJ_TEMPLATE) ? EJ_TEMPLATE_HTML : j.template,user_id:EJ_KEY,
       template_params:{subject:lastMail.subj, body:(lastMail.htmlBody && j.template===EJ_TEMPLATE) ? lastMail.htmlBody : lastMail.body, to_email:j.to, name:"Jeremy Levin", email:"Jeremy.levin@loewshotels.com"}})})
