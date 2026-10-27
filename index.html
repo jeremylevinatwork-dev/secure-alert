@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-build="fob-20261027-1425">
+<html lang="en" data-build="fob-20261027-1605">
 <head>
 <meta charset="UTF-8">
 <meta name="mobile-web-app-capable" content="yes">
@@ -703,6 +703,7 @@ function renderDash(){
     +'<div class="tile tap" onclick="goHotelSent(\'ALL\')"><div class="n" style="color:#2b6cb0">'+S.fobs.filter(f=>!f.discardedAt && fobOutCount(f)).length+'</div><div class="l"><span class="sentmark">\u2713</span> Submitted</div></div>'
     +'<div class="tile tap" onclick="goDiscarded()"><div class="n" style="color:#4a5568">'+S.fobs.filter(f=>f.discardedAt).length+'</div><div class="l">\uD83D\uDDD1 Trash \u2014 1 year only</div></div>'
     +'<div class="tile tap" onclick="showPrintedFobs()"><div class="n" style="color:#1A365D">'+(S.tagPrints||[]).reduce((a,t)=>a+(t.count||0),0)+'</div><div class="l">\uD83D\uDDA8 Printed fobs</div></div>'
+    +'<div class="tile tap" onclick="showShippedFobs()"><div class="n" style="color:#276749">'+S.fobs.filter(f=>f.shipId || f.shipTracking).length+'</div><div class="l">\uD83D\uDE9A Shipped \u2014 FedEx</div></div>'
     +"</div>"
 
   const fuList = S.fobs.map(f=>({f:f, fi:followInfo(f)})).filter(x=>x.fi && !x.f.discardedAt);
@@ -1622,6 +1623,100 @@ window.showPrintedFobs = ()=>{
     }).join('');
   }
   printReport('Printed fobs by property', body);
+};
+window.shipFilePick = (input, kind, u)=>{
+  const target = kind === 'ship' ? (S.shipments || []).find(x=>x.uid===u) : S.fobs.find(x=>x.uid===u);
+  if(!target) return;
+  const files = Array.prototype.slice.call(input.files || []);
+  input.value = "";
+  if(!Array.isArray(target.files)) target.files = [];
+  files.forEach(file=>{
+    const done = dc=>{
+      if(kind === 'fob'){ dc.tag = 'FedEx'; target.hist.push({t:nowLocal(), e:"FedEx file attached: " + dc.name}); }
+      target.files.push(dc);
+      save(); showShippedFobs(); toast("Attached " + dc.name);
+    };
+    if((file.type || "").indexOf("image/") === 0){
+      const url = URL.createObjectURL(file);
+      const img = new Image();
+      img.onload = ()=>{ try{
+        const mx = 1280, sc = Math.min(1, mx / Math.max(img.width, img.height));
+        const cv = document.createElement("canvas"); cv.width = Math.max(1, Math.round(img.width * sc)); cv.height = Math.max(1, Math.round(img.height * sc));
+        cv.getContext("2d").drawImage(img, 0, 0, cv.width, cv.height);
+        URL.revokeObjectURL(url);
+        done({ name: file.name, type: "image/jpeg", data: cv.toDataURL("image/jpeg", 0.72) });
+      }catch(e){ alert("Could not read that picture."); } };
+      img.onerror = ()=>{ URL.revokeObjectURL(url); alert("Could not read that picture."); };
+      img.src = url;
+    } else {
+      if(file.size > 1500000){ alert("That file is too big to attach (about 1.5 MB max). Pictures are shrunk automatically."); return; }
+      const r = new FileReader();
+      r.onload = ()=> done({ name: file.name, type: file.type || "file", data: r.result });
+      r.onerror = ()=> alert("Could not read that file.");
+      r.readAsDataURL(file);
+    }
+  });
+};
+window.shipViewFile = (kind, u, i)=>{
+  const target = kind === 'ship' ? (S.shipments || []).find(x=>x.uid===u) : S.fobs.find(x=>x.uid===u);
+  if(!target || !target.files || !target.files[i]) return;
+  const dc = target.files[i];
+  const isImg = (dc.type || "").indexOf("image/") === 0;
+  openSheet('<h2 style="font-size:16px">' + (isImg ? '\uD83D\uDDBC ' : '\uD83D\uDCC4 ') + esc(dc.name || "File") + '</h2>'
+    + (isImg ? '<img src="' + dc.data + '" alt="" style="width:100%;border-radius:10px;display:block">' : '<div style="font-size:44px;text-align:center;padding:16px 0">\uD83D\uDCC4</div>')
+    + '<a class="btn btn-gold" style="display:block;text-align:center;margin-top:12px" href="' + dc.data + '" download="' + esc(dc.name || "file") + '">Open / download</a>'
+    + '<button class="btn btn-danger" onclick="shipDelFile(\'' + kind + '\',\'' + u + '\',' + i + ')">Remove file</button>'
+    + '<button class="btn btn-ghost" onclick="showShippedFobs()">\u2190 Back to shipments</button>');
+};
+window.shipDelFile = (kind, u, i)=>{
+  const target = kind === 'ship' ? (S.shipments || []).find(x=>x.uid===u) : S.fobs.find(x=>x.uid===u);
+  if(!target || !target.files || !target.files[i]) return;
+  if(!confirm("Remove this file?")) return;
+  const nm = target.files[i].name || "File";
+  target.files.splice(i, 1);
+  if(kind === 'fob') target.hist.push({t:nowLocal(), e:"File removed: " + nm});
+  save(); showShippedFobs(); toast("File removed");
+};
+window.showShippedFobs = ()=>{
+  const fedexFiles = f=>(f.files || []).map((x, i)=>({x:x, i:i})).filter(o=>o.x && o.x.tag === 'FedEx');
+  const fileRows = (kind, owner, list)=>list.map(o=>'<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:6px 2px;border-bottom:1px solid #EDF0F4"><span style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">\uD83D\uDCC4 ' + esc(o.x.name || 'FedEx file') + '</span><span style="flex:0 0 auto"><button class="btn btn-ghost btn-sm" style="width:auto;margin:0" onclick="shipViewFile(\'' + kind + '\',\'' + owner + '\',' + o.i + ')">View</button></span></div>').join('');
+  const fobRow = (kind, f)=>{
+    const fl = fedexFiles(f);
+    return '<div style="padding:7px 2px;border-bottom:1px solid #EDF0F4"><b>' + esc(f.fobId) + '</b>' + (f.num ? ' \u00B7 #' + esc(f.num) : '') + ' \u00B7 ' + esc(propName(f.prop)) + (f.receivedAt ? ' \u00B7 \u2713 received' : '')
+      + (fl.length ? fileRows('fob', f.uid, fl) : '')
+      + '<div style="margin-top:5px"><input type="file" id="sf-' + f.uid + '" accept="image/*,.pdf,.doc,.docx" style="display:none" onchange="shipFilePick(this,\'fob\',\'' + f.uid + '\')"><button class="btn btn-ghost btn-sm" style="width:auto;margin:0" onclick="document.getElementById(\'sf-' + f.uid + '\').click()">\uD83D\uDCCE Add FedEx file</button></div></div>';
+  };
+  const ships = (S.shipments || []).slice().sort((a, b)=>String(b.finalizedAt || b.createdAt || '').localeCompare(String(a.finalizedAt || a.createdAt || '')));
+  const byShip = {};
+  S.fobs.forEach(f=>{ if(f.shipId) (byShip[f.shipId] = byShip[f.shipId] || []).push(f); });
+  const shown = {};
+  let cards = '';
+  ships.forEach(sh=>{
+    const members = byShip[sh.uid] || [];
+    members.forEach(f=>{ shown[f.uid] = 1; });
+    const fin = sh.status === 'finalized';
+    cards += '<div class="card"><h3 style="margin-bottom:4px">\uD83D\uDCE6 Shipment' + (sh.tracking ? ' \u2014 FedEx <a href="https://www.fedex.com/fedextrack/?trknbr=' + encodeURIComponent(sh.tracking) + '" target="_blank" rel="noopener">' + esc(sh.tracking) + '</a>' : '') + '</h3>'
+      + '<div style="margin:4px 0"><span style="display:inline-block;padding:3px 10px;border-radius:999px;font-size:12px;font-weight:800;' + (fin ? 'background:#c6f6d5;color:#276749' : 'background:#fefcbf;color:#975a16') + '">' + (fin ? '\u2713 SHIPPED OUT' : 'BEING PREPARED') + '</span></div>'
+      + '<div class="note">' + (fin ? 'Shipped out ' + esc(fmtD(sh.finalizedAt)) + (sh.finalizedBy ? ' by ' + esc(sh.finalizedBy) : '') : 'Started ' + esc(fmtD(sh.createdAt)) + (sh.createdBy ? ' by ' + esc(sh.createdBy) : '')) + '</div>'
+      + (members.length ? members.map(f=>fobRow('ship', f)).join('') : '<div class="note" style="padding:6px 2px">No fobs in this shipment yet.</div>')
+      + ((sh.files || []).length ? '<div style="margin-top:8px;font-weight:700;font-size:13px">FedEx files</div>' + (sh.files || []).map((x, i)=>({x:x, i:i})).map(o=>'<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:6px 2px;border-bottom:1px solid #EDF0F4"><span style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">\uD83D\uDCC4 ' + esc(o.x.name || 'FedEx file') + '</span><span style="flex:0 0 auto"><button class="btn btn-ghost btn-sm" style="width:auto;margin:0" onclick="shipViewFile(\'ship\',\'' + sh.uid + '\',' + o.i + ')">View</button></span></div>').join('') : '')
+      + '<div style="margin-top:8px"><input type="file" id="ss-' + sh.uid + '" accept="image/*,.pdf,.doc,.docx" style="display:none" onchange="shipFilePick(this,\'ship\',\'' + sh.uid + '\')"><button class="btn btn-ghost btn-sm" style="width:auto;margin:0" onclick="document.getElementById(\'ss-' + sh.uid + '\').click()">\uD83D\uDCCE Add file</button></div></div>';
+  });
+  const legacy = {};
+  S.fobs.forEach(f=>{ if(!f.shipId && f.shipTracking) (legacy[f.shipTracking] = legacy[f.shipTracking] || []).push(f); });
+  Object.keys(legacy).forEach(trk=>{
+    const members = legacy[trk];
+    members.forEach(f=>{ shown[f.uid] = 1; });
+    const when = members.map(f=>f.shipWhen || '').sort().pop();
+    cards += '<div class="card"><h3 style="margin-bottom:4px">\uD83D\uDCE6 Shipment \u2014 FedEx <a href="https://www.fedex.com/fedextrack/?trknbr=' + encodeURIComponent(trk) + '" target="_blank" rel="noopener">' + esc(trk) + '</a></h3>'
+      + '<div style="margin:4px 0"><span style="display:inline-block;padding:3px 10px;border-radius:999px;font-size:12px;font-weight:800;background:#c6f6d5;color:#276749">\u2713 SHIPPED OUT</span></div>'
+      + (when ? '<div class="note">Shipped out ' + esc(when) + '</div>' : '')
+      + members.map(f=>fobRow('legacy', f)).join('') + '</div>';
+  });
+  let h = '<h2>\uD83D\uDE9A Shipped \u2014 FedEx</h2><div class="sub">Every fob shipment to SecurAlert with its FedEx tracking and file copies.</div>';
+  h += cards || '<div class="card"><div class="empty">No FedEx shipments yet.</div></div>';
+  h += '<button class="btn btn-ghost" onclick="closeSheet()">Close</button>';
+  openSheet(h);
 };
 window.printTrashNums = ()=>{
   const list = S.fobs.filter(f=>f.discardedAt && f.num && ((window._trashSel && window._trashSel.size) ? window._trashSel.has(f.uid) : inFilter(f.prop)))
