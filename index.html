@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-build="fob-20261026-1602">
+<html lang="en" data-build="fob-20261027-1425">
 <head>
 <meta charset="UTF-8">
 <meta name="mobile-web-app-capable" content="yes">
@@ -939,7 +939,7 @@ window.selectAllSubmitted = ()=>{
   renderFobs();
   toast(subs.length + ' submitted fobs selected \u2014 tap Print in the bar');
 };
-window.clearFobSel = ()=>{ fobSel = {}; renderFobs(); };
+window.clearFobSel = ()=>{ fobSel = {}; window._reportNote = ''; renderFobs(); };
 function fobProblem(f){
   const probs = [];
   [f.status].concat(f.also || []).forEach(c => { if((c === 'Broken' || c === 'Not Able to Charge' || c === 'Charger Port Broken' || c === 'Not Under Warranty 1 Year') && probs.indexOf(c) < 0) probs.push(c); });
@@ -953,6 +953,7 @@ window.emailSelectedFobs = ()=>{
   if(sel.length > 10){ toast('10 at a time only — send these first'); return; }
   const now = new Date();
   const lines = ['To whom it may concern,', '', 'Please confirm whether the following Secure Alert fobs from '+propName(sel[0].prop)+' are covered under warranty:', '', 'Date sent: '+todayISO(), 'Time sent: '+now.toLocaleTimeString(), ''];
+  if(window._reportNote) lines.push('Note: '+window._reportNote, '');
   sel.forEach((f, i)=>{
     lines.push((i+1)+'. FULL FOB ID: '+f.fobId+(f.num ? '  (Fob number: '+f.num+')' : ''));
     lines.push('   Problem: '+fobProblem(f));
@@ -993,6 +994,7 @@ window.printSelectedFobs = ()=>{
     let mbody = '<h1>Fob Submission \u2014 SecurAlert Warranty Check</h1>'
       + '<h2>' + sel.length + ' fobs \u00B7 all properties<br>Date: ' + esc(todayISO()) + ' \u00B7 Time: ' + esc(now.toLocaleTimeString()) + ' \u00B7 Printed by ' + esc(fobSessionName() || '\u2014') + '</h2>'
       + '<p style="font-size:13px">Warranty confirmation requested from SecurAlert. Fobs stay on hand until SecurAlert replies by email; confirmed fobs ship back, fobs not under warranty are discarded.</p>'
+      + (window._reportNote ? '<p style="font-size:14px;background:#FFF8E1;border:1.5px solid #c9a227;border-radius:8px;padding:8px 11px"><b>Note:</b> ' + esc(window._reportNote) + '</p>' : '')
       + '<table><tr><th>#</th><th>FULL FOB ID</th><th>Fob #</th><th>Hotel</th><th>Problem</th><th>Dept</th><th>Assigned to</th><th>Last test</th><th>Ticket</th></tr>'
       + sel.map((f, i)=>'<tr><td>' + (i+1) + '</td><td><b>' + esc(f.fobId) + '</b></td><td>' + esc(f.num || '\u2014') + '</td><td>' + esc(propName(f.prop)) + '</td><td>' + esc(fobProblem(f)) + '</td><td>' + esc(f.dept || '\u2014') + '</td><td>' + esc(f.staff || '\u2014') + (f.shift ? ' (' + esc(f.shift) + ')' : '') + '</td><td>' + esc(f.battery || '\u2014') + '</td><td>' + esc(f.sentRpt || '\u2014') + '</td></tr>').join('')
       + '</table>';
@@ -1006,6 +1008,7 @@ window.printSelectedFobs = ()=>{
   let body = '<h1>Fob Submission \u2014 SecurAlert Warranty Check</h1>'
     + '<h2>' + esc(propName(sel[0].prop)) + ' \u00B7 ' + sel.length + ' fob' + (sel.length > 1 ? 's' : '') + '<br>Date: ' + esc(todayISO()) + ' \u00B7 Time: ' + esc(now.toLocaleTimeString()) + ' \u00B7 Printed by ' + esc(fobSessionName() || '\u2014') + '</h2>'
     + '<p style="font-size:13px">Warranty confirmation requested from SecurAlert. Fobs stay on hand until SecurAlert replies by email; confirmed fobs ship back, fobs not under warranty are discarded.</p>'
+      + (window._reportNote ? '<p style="font-size:14px;background:#FFF8E1;border:1.5px solid #c9a227;border-radius:8px;padding:8px 11px"><b>Note:</b> ' + esc(window._reportNote) + '</p>' : '')
     + '<table><tr><th>#</th><th>FULL FOB ID</th><th>Fob #</th><th>Problem</th><th>Dept</th><th>Assigned to</th><th>Last test</th></tr>'
     + sel.map((f, i)=>'<tr><td>' + (i+1) + '</td><td><b>' + esc(f.fobId) + '</b></td><td>' + esc(f.num || '\u2014') + '</td><td>' + esc(fobProblem(f)) + '</td><td>' + esc(f.dept || '\u2014') + '</td><td>' + esc(f.staff || '\u2014') + (f.shift ? ' (' + esc(f.shift) + ')' : '') + '</td><td>' + esc(f.battery || '\u2014') + '</td></tr>').join('')
     + '</table>';
@@ -1037,7 +1040,7 @@ function renderFobs(){
   if(fobDate) h += '<div style="margin:2px 0 10px"><button class="chip active" onclick="clearFobDate()">Showing: activity on ' + fobDateDisp() + ' \u2715</button></div>';
   const selN = Object.keys(fobSel).length;
   if(!fobDiscarded && S.fobs.some(f=>fobNeedsPickup(f))) h += '<button class="btn btn-gold" style="margin-bottom:10px" onclick="openPickupSheet()">\uD83D\uDE90 Fob pickups \u2014 ' + S.fobs.filter(f=>fobNeedsPickup(f)).length + ' waiting at properties</button>';
-  if(selN) h += '<div class="selbar">\u2611\uFE0F <b>'+selN+'</b> fob'+(selN>1?'s':'')+' selected <span class="note" style="color:#cbd5e0">(send: max 10 · same hotel only)</span>' + (canSendFobs() ? '<button class="btn btn-gold btn-sm" onclick="emailSelectedFobs()">\u2709 Send to support</button>' : '') + '<button class="btn btn-sm" style="color:#fff;border:1.5px solid #fff;background:transparent;width:auto;margin:0" onclick="printSelectedFobs()">\uD83D\uDDA8 Print</button><button class="btn btn-sm" style="color:#fff;border:1.5px solid #fff;background:transparent;width:auto;margin:0" onclick="clearFobSel()">Clear</button></div>';
+  if(selN) h += '<div class="selbar">\u2611\uFE0F <b>'+selN+'</b> fob'+(selN>1?'s':'')+' selected <span class="note" style="color:#cbd5e0">(send: max 10 · same hotel only)</span>' + (canSendFobs() ? '<button class="btn btn-gold btn-sm" onclick="emailSelectedFobs()">\u2709 Send to support</button>' : '') + '<button class="btn btn-sm" style="color:#fff;border:1.5px solid #fff;background:transparent;width:auto;margin:0" onclick="printSelectedFobs()">\uD83D\uDDA8 Print</button><button class="btn btn-sm" style="color:#fff;border:1.5px solid #fff;background:transparent;width:auto;margin:0" onclick="clearFobSel()">Clear</button><input id="reportNote" placeholder="Note for the report (optional)" value="'+esc(window._reportNote || '')+'" oninput="window._reportNote=this.value" style="flex:1 1 100%;padding:9px;border:1.5px solid #cbd5e0;border-radius:9px;font-size:16px;background:#fff;color:#1a202c;margin-top:2px"></div>';
   // Show matching tickets first if any
   if(matchingTickets.length){
     h += '<div class="card"><h3>Matching Tickets ('+matchingTickets.length+')</h3><div class="tscroll"><table class="props"><tr><th>Ticket</th><th>Hotel</th><th>Fob ID</th><th>Issue</th><th>Approved</th><th>Fobs List</th></tr>';
