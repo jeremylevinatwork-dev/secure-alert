@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-build="fob-20261028-1245">
+<html lang="en" data-build="fob-20261028-1310">
 <head>
 <meta charset="UTF-8">
 <meta name="mobile-web-app-capable" content="yes">
@@ -711,6 +711,7 @@ function renderDash(){
     +'<div class="tile tap" onclick="showPrintedFobs()"><div class="n" style="color:#1A365D">'+(S.tagPrints||[]).reduce((a,t)=>a+(t.count||0),0)+'</div><div class="l">\uD83D\uDDA8 Printed fobs</div></div>'
     +'<div class="tile tap" onclick="showShippedFobs()"><div class="n" style="color:#276749">'+S.fobs.filter(f=>f.shipId || f.shipTracking).length+'</div><div class="l">\uD83D\uDE9A Shipped \u2014 FedEx</div></div>'
     +(canAudit() ? '<div class="tile tap" onclick="showAuditAll()"><div class="n">\uD83D\uDCCB</div><div class="l">Audit \u2014 all properties</div></div>' : '')
+    +(fobSessionName() === 'Jeremy Levin' ? '<div class="tile tap" onclick="showUsageLog()"><div class="n">\uD83D\uDD75</div><div class="l">Usage log \u2014 private</div></div>' : '')
     +"</div>"
 
   const fuList = S.fobs.map(f=>({f:f, fi:followInfo(f)})).filter(x=>x.fi && !x.f.discardedAt);
@@ -2869,13 +2870,14 @@ window.doLogin=()=>{
   if(!S.team.some(t=>t.name===name&&t.pin===pin)){
     document.getElementById("login-err").textContent="Wrong PIN — try again."; return; }
   S.session={name:name};
+  try{ usageStart(); }catch(e){}
   S.logins=S.logins||[]; S.logins.push({name:name,t:nowLocal()});
   if(S.logins.length>200) S.logins=S.logins.slice(-200);
   save();
   document.getElementById("login").style.display="none";
   render(); toast("Welcome, "+name);
 };
-window.logout=()=>{ S.session=null; try{ localStorage.removeItem('loewsAuth'); localStorage.removeItem('loewsUser'); }catch(e){} save(); gateLogin(); };
+window.logout=()=>{ try{ usageEnd(); }catch(e){} S.session=null; try{ localStorage.removeItem('loewsAuth'); localStorage.removeItem('loewsUser'); }catch(e){} save(); gateLogin(); };
 window.addTeam=()=>{
   if(!(S.session && (S.session.name==="Jeremy Levin" || S.session.name==="Justin Messger"))){ toast("Only Jeremy or Justin can add team members"); return; }
   const name=document.getElementById("tm-name").value.trim();
@@ -3084,6 +3086,120 @@ window.delContractor=i=>{
 const BEACON_STATUS = ["Active","Battery Low","Offline","Replaced","Spare","Unplugged"];
 let beaconSearch = "";
 function fobSessionName(){ return (S.session && S.session.name) || ""; }
+/* === USAGE LOG (Jeremy only) ===
+   Every sign-in (PIN or portal) opens a usage session in its own cloud row
+   (usage-log), so heartbeats never churn the main state. The phone/computer
+   label comes from the device itself. Only Jeremy's profile can open it. */
+var usageEntry = null;
+function usageDevice(){
+  const ua = navigator.userAgent || '';
+  let t = 'Computer', d = 'Computer';
+  if(/iPhone/.test(ua)){ t = 'Phone'; d = 'iPhone'; }
+  else if(/iPad/.test(ua)){ t = 'Tablet'; d = 'iPad'; }
+  else if(/Android/.test(ua)){ if(/Mobile/.test(ua)){ t = 'Phone'; d = 'Android phone'; } else { t = 'Tablet'; d = 'Android tablet'; } }
+  else if(/Windows/.test(ua)){ d = 'Windows PC'; }
+  else if(/Macintosh|Mac OS/.test(ua)){ d = 'Mac'; }
+  let b = '';
+  if(/Edg\//.test(ua)) b = 'Edge'; else if(/CriOS|Chrome/.test(ua)) b = 'Chrome'; else if(/FxiOS|Firefox/.test(ua)) b = 'Firefox'; else if(/Safari/.test(ua)) b = 'Safari';
+  return { t: t, d: d + (b ? ' \u00B7 ' + b : '') };
+}
+async function usageWrite(){
+  if(!usageEntry) return;
+  try{
+    const r = await fetch(SB_URL + '/rest/v1/app_records?id=eq.usage-log&select=data', { headers: { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY } });
+    const rows = await r.json();
+    let es = (rows && rows[0] && rows[0].data && Array.isArray(rows[0].data.entries)) ? rows[0].data.entries : [];
+    const copy = JSON.parse(JSON.stringify(usageEntry));
+    const i = es.findIndex(e=>e.id === usageEntry.id);
+    if(i >= 0) es[i] = copy; else es.push(copy);
+    const cut = Date.now() - 120 * 864e5;
+    es = es.filter(e=>new Date(e.last).getTime() > cut).slice(-400);
+    await fetch(SB_URL + '/rest/v1/app_records', { method: 'POST',
+      headers: { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY, 'Content-Type': 'application/json', 'Prefer': 'resolution=merge-duplicates' },
+      body: JSON.stringify({ id: 'usage-log', app: 'secure-alert', data: { entries: es, _ts: Date.now() } }) });
+  }catch(e){}
+}
+function usageStart(){
+  const nm = fobSessionName();
+  if(!nm) return;
+  try{
+    const savedId = sessionStorage.getItem('usgId'), savedStart = sessionStorage.getItem('usgStart'), savedMins = parseInt(sessionStorage.getItem('usgMins') || '0', 10) || 0;
+    if(savedId && savedStart){
+      const dv = usageDevice();
+      usageEntry = { id: savedId, name: nm, start: savedStart, last: new Date().toISOString(), mins: savedMins, type: dv.t, device: dv.d, via: (S.session && S.session.viaPortal) ? 'Portal' : 'PIN' };
+      usageWrite();
+      return;
+    }
+  }catch(e){}
+  const dv = usageDevice();
+  usageEntry = { id: 'u-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 7), name: nm, start: new Date().toISOString(), last: new Date().toISOString(), mins: 0, type: dv.t, device: dv.d, via: (S.session && S.session.viaPortal) ? 'Portal' : 'PIN' };
+  try{ sessionStorage.setItem('usgId', usageEntry.id); sessionStorage.setItem('usgStart', usageEntry.start); sessionStorage.setItem('usgMins', '0'); }catch(e){}
+  usageWrite();
+}
+window.usageTick = ()=>{
+  if(!usageEntry || !fobSessionName()) return;
+  usageEntry.last = new Date().toISOString();
+  if(!document.hidden){ usageEntry.mins += 1; try{ sessionStorage.setItem('usgMins', String(usageEntry.mins)); }catch(e){} }
+  usageWrite();
+};
+setInterval(()=>{ try{ window.usageTick(); }catch(e){} }, 60000);
+document.addEventListener('visibilitychange', ()=>{ if(document.hidden && usageEntry){ usageEntry.last = new Date().toISOString(); usageWrite(); } });
+function usageEnd(){
+  if(!usageEntry) return;
+  usageEntry.last = new Date().toISOString();
+  usageWrite();
+  usageEntry = null;
+  try{ sessionStorage.removeItem('usgId'); sessionStorage.removeItem('usgStart'); sessionStorage.removeItem('usgMins'); }catch(e){}
+}
+function usageDur(m){
+  m = m || 0;
+  if(m < 1) return 'under 1 min';
+  if(m < 60) return m + ' min';
+  const h = Math.floor(m / 60), r = m % 60;
+  return h + ' h' + (r ? ' ' + r + ' min' : '');
+}
+window.showUsageLog = async ()=>{
+  if(fobSessionName() !== 'Jeremy Levin'){ toast('The usage log is private'); return; }
+  openSheet('<h2>\uD83D\uDD75 Usage log</h2><div class="sub">Loading\u2026</div>');
+  let es = [];
+  try{
+    const r = await fetch(SB_URL + '/rest/v1/app_records?id=eq.usage-log&select=data', { headers: { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY } });
+    const rows = await r.json();
+    if(rows && rows[0] && rows[0].data && Array.isArray(rows[0].data.entries)) es = rows[0].data.entries;
+  }catch(e){}
+  es = es.slice().sort((a, b)=>String(b.start).localeCompare(String(a.start)));
+  const byName = {};
+  es.forEach(e=>{ const p = byName[e.name] = byName[e.name] || { n: 0, mins: 0, last: '', devs: {} }; p.n++; p.mins += e.mins || 0; if(String(e.last) > p.last) p.last = String(e.last); p.devs[e.type] = 1; });
+  const nowMs = Date.now();
+  let h = '<h2>\uD83D\uDD75 Usage log \u2014 private</h2><div class="sub">Every sign-in to Secure Alert, the device used, and the time spent in the app. Only your profile can see this.</div>';
+  const names = Object.keys(byName).sort((a, b)=>byName[b].mins - byName[a].mins);
+  if(!names.length) h += '<div class="note" style="margin-top:10px">No sign-ins recorded yet. New sign-ins appear here from now on.</div>';
+  names.forEach(nm=>{
+    const p = byName[nm];
+    const onNow = p.last && (nowMs - new Date(p.last).getTime() < 3 * 60000);
+    h += '<div class="card" style="margin-top:10px"><div style="font-weight:800;color:#0F2440">' + esc(nm) + (onNow ? ' <span style="color:#1F9D55;font-size:12px">\u25CF on now</span>' : '') + '</div>'
+      + '<div class="sub">' + p.n + ' sign-in' + (p.n === 1 ? '' : 's') + ' \u00B7 ' + usageDur(p.mins) + ' total \u00B7 last ' + esc(fmtDT(p.last)) + ' \u00B7 ' + Object.keys(p.devs).join(' + ') + '</div></div>';
+  });
+  if(es.length){
+    h += '<div style="font-weight:800;color:#0F2440;margin:14px 0 4px">Recent sign-ins</div>'
+      + es.slice(0, 40).map(e=>{
+        const onNow = nowMs - new Date(e.last).getTime() < 3 * 60000;
+        return '<div class="sub" style="padding:5px 0;border-bottom:1px solid #E4E9F0">' + esc(e.name) + ' \u00B7 ' + esc(e.device) + ' (' + esc(e.type) + ') \u00B7 ' + esc(fmtDT(e.start)) + ' \u00B7 ' + usageDur(e.mins) + (onNow ? ' \u00B7 <span style="color:#1F9D55;font-weight:700">on now</span>' : '') + '</div>';
+      }).join('');
+  }
+  h += '<button class="btn btn-ghost" style="margin-top:12px" onclick="printUsageLog()">\uD83D\uDDA8 Print usage log</button>';
+  window._usageEntries = es;
+  openSheet(h);
+};
+window.printUsageLog = ()=>{
+  const es = (window._usageEntries || []).slice().sort((a, b)=>String(b.start).localeCompare(String(a.start)));
+  let body = '<h1>\uD83D\uDD75 Secure Alert \u2014 Usage Log</h1><h2>Sign-ins, devices and time in the app \u00B7 Printed ' + esc(todayISO()) + ' by Jeremy Levin \u00B7 Private</h2>'
+    + '<table><tr><th>Who</th><th>Device</th><th>Signed in</th><th>Last active</th><th>Time used</th></tr>'
+    + es.map(e=>'<tr><td>' + esc(e.name) + '</td><td>' + esc(e.device) + ' (' + esc(e.type) + ')</td><td>' + esc(fmtDT(e.start)) + '</td><td>' + esc(fmtDT(e.last)) + '</td><td>' + usageDur(e.mins) + '</td></tr>').join('') + '</table>';
+  printReport('Secure Alert usage log', body);
+};
+/* === END USAGE LOG === */
+
 function beaconBadge(st){
   const m={"Active":"b-green","Battery Low":"b-amber","Offline":"b-red","Replaced":"b-gray","Spare":"b-blue","Unplugged":"b-purple"};
   return '<span class="badge '+(m[st]||"b-gray")+'">'+esc(st)+"</span>";
@@ -3928,6 +4044,7 @@ function render(){
 load();
 if(!S.team||!S.team.length) S.team=[{name:"Jeremy Levin",pin:"1245"},{name:"Alexander Duff",pin:"0132"},{name:"Dominique Black",pin:"2195"},{name:"Sean Forester",pin:"3867"},{name:"Justin Messger",pin:"5132"}];
 renderPropbar(); render(); gateLogin();
+try{ if(S.session && S.session.name) usageStart(); }catch(e){}
 /* deep link from emails: ?fob=ID&file=name or ?ticket=RPT&file=name */
 try{
   const _qs = new URLSearchParams(location.search);
