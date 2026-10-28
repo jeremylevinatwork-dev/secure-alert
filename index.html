@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-build="fob-20261028-1420">
+<html lang="en" data-build="fob-20261028-1450">
 <head>
 <meta charset="UTF-8">
 <meta name="mobile-web-app-capable" content="yes">
@@ -1748,6 +1748,48 @@ window.printAuditList = ()=>{
   printReport('Secure Alert fob audit list', body);
 };
 
+/* Compact email version of the audit: same form, class-based styling and
+   trimmed notes so the whole thing stays under the email service's size
+   limit (the full print version is ~140 KB and gets HTTP 413). */
+function auditEmailHtml(perProp, meta){
+  const tr100 = s => { s = String(s == null ? '' : s); return s.length > 100 ? s.slice(0, 100) + '\u2026' : (s || '\u2014'); };
+  const build = inspFull => {
+    let h = '<style>.ac{font-family:Arial,sans-serif;color:#1a202c;font-size:14px}.acv{background:#0F2440;color:#fff;padding:16px 18px;border-radius:6px}.acv .t{font-size:21px;font-weight:800}.acv .g{color:#C9A227;font-weight:700;margin-top:2px}.acv .m{color:#D7DEE8;font-size:12.5px;margin-top:7px;line-height:1.5}.alg{border:1.5px solid #0F2440;border-radius:6px;padding:10px 14px;margin-top:12px;font-size:13px;line-height:1.55}.abn{background:#0F2440;color:#fff;padding:9px 12px;border-radius:6px;margin-top:20px;font-weight:800}.abn span{color:#C9A227;font-weight:700}.abn i{float:right;font-style:normal;font-weight:400;font-size:12px;color:#D7DEE8}table.at{width:100%;border-collapse:collapse;margin-top:6px}table.at th{background:#0F2440;color:#fff;padding:7px;text-align:left;font-size:12.5px}table.at td{padding:6px 7px;border-bottom:1px solid #ddd;font-size:13px}.ah{font-weight:800;color:#0F2440;margin-top:12px}.as{font-size:12px;color:#666}.asg{border:1.5px solid #0F2440;border-radius:6px;padding:12px 14px;margin-top:22px;font-size:13px}</style>'
+      + '<div class="ac"><div class="acv"><div class="t">SECURE ALERT \u2014 YEARLY AUDIT ' + meta.yr + '</div><div class="g">Security Systems Technology \u00B7 All properties</div><div class="m">Prepared by ' + esc(meta.by) + ' \u00B7 ' + esc(meta.when) + '<br>Every Code Green emergency fob and beacon in service at all ' + meta.propCount + ' properties, who last battery-tested each one, and the daily property inspection log for ' + meta.yr + '.</div></div>'
+      + '<div class="alg"><b>HOW TO READ THIS AUDIT</b><br><b>Fob #</b> = the tag number on the device. <b>Fob ID</b> = its electronic ID (how SecurAlert knows it). <b>Status</b> = where it is now; anything after a + is an extra mark. <b>Last test / Tested by</b> = the most recent battery test on record and who ran it \u2014 the proof of testing. <b>Discarded</b> fobs are out of service, kept on file one year, and not audited.</div>'
+      + '<div class="ah" style="font-size:15px;margin-top:18px">AUDIT SUMMARY \u2014 ALL PROPERTIES</div>'
+      + '<table class="at"><tr><th>Property</th><th style="text-align:center">Fobs</th><th style="text-align:center">Beacons</th><th style="text-align:center">Inspections</th></tr>'
+      + perProp.map(x=>'<tr><td><b>' + esc(propName(x.c)) + '</b> (' + esc(x.c) + ')</td><td style="text-align:center">' + x.pf.length + '</td><td style="text-align:center">' + x.pb.length + '</td><td style="text-align:center">' + x.pi.length + '</td></tr>').join('')
+      + '<tr style="background:#EEF2F7;font-weight:800"><td>TOTAL</td><td style="text-align:center">' + meta.totF + '</td><td style="text-align:center">' + meta.totB + '</td><td style="text-align:center">' + meta.totI + '</td></tr></table>';
+    perProp.forEach(x=>{
+      h += '<div class="abn">' + esc(propName(x.c)) + ' <span>(' + esc(x.c) + ')</span><i>' + x.pf.length + ' fobs \u00B7 ' + x.pb.length + ' beacons \u00B7 ' + x.pi.length + ' inspections</i></div>';
+      if(x.pf.length){
+        h += '<div class="ah">A \u2014 Emergency fobs (' + x.pf.length + ')</div><table class="at"><tr><th>Fob #</th><th>Fob ID</th><th>Status</th><th>Dept</th><th>Assigned to</th><th>Last test</th><th>Tested by</th></tr>'
+          + x.pf.map(f=>'<tr><td>' + esc(f.num || '\u2014') + '</td><td>' + esc(f.fobId) + '</td><td>' + esc(f.status) + ((f.also && f.also.length) ? ' + ' + esc(f.also.join(', ')) : '') + '</td><td>' + esc(f.dept || '\u2014') + '</td><td>' + esc(f.staff || '\u2014') + '</td><td>' + esc(f.battery || '\u2014') + '</td><td>' + esc(f.battBy || '\u2014') + '</td></tr>').join('') + '</table>';
+      }
+      if(x.pb.length){
+        h += '<div class="ah">B \u2014 Beacons (' + x.pb.length + ')</div><table class="at"><tr><th>Beacon</th><th>Area</th><th>Status</th><th>Battery tested</th><th>Tested by</th></tr>'
+          + x.pb.map(b=>'<tr><td>' + esc(b.beaconId) + '</td><td>' + esc(b.area || '\u2014') + '</td><td>' + esc(b.status || '\u2014') + '</td><td>' + esc(fmtD(b.battDate)) + '</td><td>' + esc(b.battBy || '\u2014') + '</td></tr>').join('') + '</table>';
+      }
+      if(x.pi.length){
+        if(inspFull){
+          h += '<div class="ah">C \u2014 Daily inspection log \u2014 ' + meta.yr + ' (' + x.pi.length + ')</div><table class="at"><tr><th>Date</th><th>Category</th><th>Inspector</th><th>Logged by</th><th>Notes</th></tr>'
+            + x.pi.map(e=>'<tr><td>' + esc(e.date || '\u2014') + '</td><td>' + esc(e.category || '\u2014') + '</td><td>' + esc(e.inspector || '\u2014') + '</td><td>' + esc(e.by || '\u2014') + '</td><td>' + esc(tr100(e.notes)) + '</td></tr>').join('') + '</table>';
+        } else {
+          h += '<div class="ah">C \u2014 Daily inspection log \u2014 ' + meta.yr + ' (' + x.pi.length + ')</div><div class="as">' + x.pi.length + ' entries logged at this property this year \u2014 the full log is in the printed audit and the Inspect app.</div>';
+        }
+      }
+    });
+    if(meta.otherCount) h += '<p class="as" style="margin-top:12px">Also logged this year under Lakewood / All properties / Other: ' + meta.otherCount + ' entries (see the Inspect app).</p>';
+    h += '<p class="as">Discarded fobs on file (kept one year): ' + meta.discarded + ' \u2014 not audited.</p>'
+      + '<div class="asg"><b>AUDIT SIGN-OFF</b><br><br>Audit completed by: ______________________________ &nbsp; Date: ______________<br><br>Reviewed by: ______________________________ &nbsp; Date: ______________</div>'
+      + '<p class="as" style="margin-top:10px">Generated by the Secure Alert app \u00B7 Security Systems Technology</p></div>';
+    return h;
+  };
+  let out = build(true);
+  if(out.length > 46000) out = build(false);
+  return out;
+}
 window.showAuditAll = async ()=>{
   if(!canAudit()){ toast('The audit is for Jeremy and Justin only'); return; }
   toast('Building the audit\u2026');
@@ -1806,9 +1848,10 @@ window.showAuditAll = async ()=>{
     + '<p class="foot">Generated by the Secure Alert app \u00B7 Security Systems Technology \u00B7 ' + esc(now.toLocaleDateString()) + '</p>';
   text += '\nDiscarded fobs on file (kept one year): ' + S.fobs.filter(f=>f.discardedAt).length + ' (not audited).\n';
   window._auditHtml = body; window._auditText = text;
+  window._auditEmailHtml = auditEmailHtml(perProp, { yr: yr, totF: totF, totB: totB, totI: totI, by: fobSessionName() || '\u2014', when: now.toLocaleDateString() + ' \u00B7 ' + now.toLocaleTimeString(), discarded: S.fobs.filter(f=>f.discardedAt).length, otherCount: other.length, propCount: PROPS.length });
   openSheet('<h2>\uD83D\uDCCB Audit \u2014 all properties</h2><div class="sub">' + esc(head) + '<br>' + live.length + ' fobs in service \u00B7 ' + bcs.length + ' beacons \u00B7 ' + insp.length + ' inspection log entries (' + yr + ')</div>'
     + '<div class="note" style="margin-top:8px">The printed form is the official one: it opens with a summary of every property and a short guide that explains what every column means, then the detail for each property, and a sign-off block at the end.</div>'
-    + '<div style="display:flex;gap:8px;margin:10px 0"><button class="btn btn-gold" style="flex:1;width:auto;margin:0" onclick="printReport(\'Secure Alert yearly audit \u2014 all properties\', window._auditHtml)">\uD83D\uDDA8 Print audit</button><button class="btn" style="flex:1;width:auto;margin:0;background:#0F2440" onclick="window._mailHtml=window._auditHtml;composeMail(\'Secure Alert yearly audit \u2014 all properties \u2014 ' + yr + '\', window._auditText, \'ALL\')">\u2709\uFE0F Email audit</button></div>'
+    + '<div style="display:flex;gap:8px;margin:10px 0"><button class="btn btn-gold" style="flex:1;width:auto;margin:0" onclick="printReport(\'Secure Alert yearly audit \u2014 all properties\', window._auditHtml)">\uD83D\uDDA8 Print audit</button><button class="btn" style="flex:1;width:auto;margin:0;background:#0F2440" onclick="window._mailHtml=window._auditEmailHtml||window._auditHtml;composeMail(\'Secure Alert yearly audit \u2014 all properties \u2014 ' + yr + '\', window._auditText, \'ALL\')">\u2709\uFE0F Email audit</button></div>'
     + '<div class="note">Only you and Justin can see this audit button.</div>');
 };
 
