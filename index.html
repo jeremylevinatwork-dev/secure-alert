@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-build="fob-20261027-1650">
+<html lang="en" data-build="fob-20261028-0845">
 <head>
 <meta charset="UTF-8">
 <meta name="mobile-web-app-capable" content="yes">
@@ -792,7 +792,17 @@ function fobCostCell(pf, ctCost, ctN, nsN){
   if(ctN) cell += "<br><span class=\"note\">" + ctN + " portal ticket" + (ctN>1?"s":"") + " included</span>";
   return cell + "</td><td><b>" + brokeWithinYearCount(pf) + "</b></td><td><b>" + (nsN || 0) + "</b></td></tr>";
 }
-h += '<div class="card closed"><h3 onclick="toggleCard(this)" style="cursor:pointer">By hotel <span class="note">($181 per broken fob)</span> <span class="chev" style="float:right">▸</span></h3><div class="tscroll"><table class="props dashprops"><tr><th>Hotel</th><th>Fobs</th><th>Assigned</th><th>Submissions</th><th>Warranty</th><th>Cost</th><th>Broke in 1st year</th><th>New stock</th></tr>';
+const chartRows = PROPS.map(c=>{
+    const pf = S.fobs.filter(f=>f.prop===c);
+    const pc = pf.filter(f=>!f.discardedAt && !fobIsNewStock(f) && fobIsBroken(f));
+    const ct = customerTickets.filter(t=>t.hotelCode===c && !S.fobs.some(f=>String(f.fobId).toLowerCase()===String(t.fobId||"").toLowerCase()));
+    const cost = pc.reduce((a,f)=>a+fobCharge(f),0) + ct.reduce((a,t)=>a+(t.warranty===true?0:181),0);
+    return { c:c, n: pc.length + ct.length, cost: cost };
+  });
+  const chartMax = Math.max(1, ...chartRows.map(r=>r.n));
+  const PROP_COLORS = { PBH:'#1A365D', HRH:'#C53030', RPR:'#2B6CB0', SFR:'#2F855A', AVH:'#B7791F', CBBR:'#6B46C1', ESS:'#DD6B20', ESD:'#319795', SNR:'#805AD5', TLR:'#D53F8C', HGH:'#718096' };
+  const chartHtml = '<div style="margin:8px 0 12px">' + chartRows.map(r=>'<div style="display:flex;align-items:center;gap:8px;margin:4px 0"><span style="flex:0 0 44px;font-weight:800;font-size:12.5px;color:#1A365D">' + esc(r.c) + '</span><div style="flex:1;background:#EDF2F7;border-radius:6px;height:18px;overflow:hidden"><div style="height:100%;width:' + Math.round(r.n / chartMax * 100) + '%;background:' + (PROP_COLORS[r.c] || '#1A365D') + ';border-radius:6px"></div></div><span style="flex:0 0 auto;font-size:12.5px;font-weight:700;color:#2D3748">' + r.n + ' broken \u00B7 $' + r.cost.toLocaleString('en-US') + '</span></div>').join('') + '</div>';
+h += '<div class="card closed"><h3 onclick="toggleCard(this)" style="cursor:pointer">By hotel <span class="note">($181 per broken fob)</span> <span class="chev" style="float:right">▸</span></h3>' + chartHtml + '<div class="tscroll"><table class="props dashprops"><tr><th>Hotel</th><th>Fobs</th><th>Assigned</th><th>Submissions</th><th>Warranty</th><th>Cost</th><th>Broke in 1st year</th><th>New stock</th></tr>';
   const TOT={n:0,a:0,s:0,w:0,cost:0,broke:0,ns:0};
   PROPS.forEach(c=>{
     const pf=S.fobs.filter(f=>f.prop===c), ps=S.subs.filter(s=>s.prop===c);
