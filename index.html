@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-build="fob-20261028-1130">
+<html lang="en" data-build="fob-20261028-1200">
 <head>
 <meta charset="UTF-8">
 <meta name="mobile-web-app-capable" content="yes">
@@ -693,7 +693,7 @@ function renderDash(){
   const transit = subs.filter(s=>s.status==="Submitted"||s.status==="In Transit").length;
   const attn = n("In Repair")+n("Broken")+n("Warranty")+n("Lost");
   let h = '<div class="brandstrip home" style="background:#fff;border-radius:12px;padding:10px 12px;margin-bottom:10px"><img src="loews-logo-trim.jpg" alt="Loews Hotels" style="height:68px;width:auto;display:block;margin:2px auto 8px"><img src="securalert-logo.jpg" alt="SECURalert" style="width:100%;max-width:520px;display:block;margin:0 auto"></div>'
-    + mailApprovalCard() + subApprovalCard() + actApprovalCard()
+    + approvalsButton() + mailApprovalCard() + subApprovalCard() + actApprovalCard()
     + '<h2 class="sec" style="margin-top:2px">Today at a glance</h2><div class="row">'
     +'<div class="tile tap" onclick="goFobsNotSent()"><div class="n">'+fobs.filter(f=>!fobOutCount(f)).length+'</div><div class="l">Fobs</div></div>'
     +'<div class="tile tap" onclick="goFobs(\'Assigned\',\'\')"><div class="n">'+n("Assigned")+'</div><div class="l">Assigned</div></div>'
@@ -881,6 +881,12 @@ window.clearBcnSel = ()=>{ bcnSel = {}; renderBeacons(); };
 function canSendFobs(){ return !!(S.session && S.session.name === 'Jeremy Levin'); }
 function isJeremy(){ return !!(S.session && S.session.name === 'Jeremy Levin'); }
 function canAudit(){ const nm = fobSessionName(); return nm === 'Jeremy Levin' || nm === 'Justin Messger' || nm === 'Justin Messenger'; }
+function approvalsButton(){
+  if(!canSendFobs()) return '';
+  const n = (S.mailQueue||[]).filter(q=>q.status==='pending').length + (S.subQueue||[]).filter(q=>q.status==='pending').length + (S.actQueue||[]).filter(q=>q.status==='pending').length;
+  if(!n) return '';
+  return '<button class="btn btn-gold" onclick="document.getElementById(\'apprTop\').scrollIntoView({behavior:\'smooth\'})" style="margin-bottom:12px">\uD83D\uDD14 ' + n + ' submitted \u2014 waiting for your review</button><span id="apprTop"></span>';
+}
 window._histEdit = null;
 function histLocalVal(t){ const s=String(t||''); const m=s.match(/^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2})/); if(m) return m[1]+'T'+m[2]; const d=new Date(s); if(isNaN(d)) return ''; const p=n=>String(n).padStart(2,'0'); return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())+'T'+p(d.getHours())+':'+p(d.getMinutes()); }
 window.openFobHist = u=>{ window._fdPane='hist'; fobDetail(u); };
@@ -897,14 +903,7 @@ function queueHeldMail(kind){
     mail:{subj:lastMail.subj||'', body:lastMail.body||'', htmlBody:lastMail.htmlBody||'', to:lastMail.to||MAIL_TO, label:lastMail.label||'', template:lastMail.template||'', rpt:lastMail.rpt||''},
     jobs:jobs, status:'pending' };
   S.mailQueue.push(item); save();
-  try{
-    fetch("https://api.emailjs.com/api/v1.0/email/send",{method:"POST",headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({service_id:EJ_SERVICE,template_id:EJ_TEMPLATE,user_id:EJ_KEY,
-        template_params:{subject:"Email approval needed \u2014 "+item.by+" (Secure Alert app)",
-          body:((item.by||'A team member')+" tried to send an email from the Secure Alert (Fobs) app.\n\nSubject: "+item.mail.subj+"\nTo: "+(jobs? jobs.map(j=>j.label).join(' + ') : (item.kind==='test'?'TEST to Jeremy Gmail':item.mail.to))+"\nWhen: "+new Date(item.ts).toLocaleString()+"\n\nIt is HELD \u2014 nothing was sent. Open the Secure Alert app (Home tab) to Approve or Dismiss it."),
-          to_email:MAIL_TO, name:"Jeremy Levin", email:"Jeremy.levin@loewshotels.com"}})}).catch(()=>{});
-  }catch(e){}
-  toast("Held for Jeremy's approval \u2014 he's been notified");
+  toast(kind === 'test' ? "Test sent" : ("Sent to " + ((jobs && jobs.length) ? jobs.map(j=>j.label).join(" + ") : (lastMail.label || "Support"))));
   try{ closeSheet(); }catch(e){}
 }
 function mailApprovalCard(){
@@ -2061,7 +2060,8 @@ window.delFob = u=>{
 
 /* ---------- submissions ---------- */
 function renderSubs(){
-  const list=S.subs.filter(s=>inFilter(s.prop)).sort((a,b)=>String(b.created).localeCompare(String(a.created)));
+  const ownQ=(S.subQueue||[]).filter(q=>q.status==='pending' && S.session && q.by===S.session.name).map(q=>q.rec);
+  const list=S.subs.concat(ownQ).filter(s=>inFilter(s.prop)).sort((a,b)=>String(b.created).localeCompare(String(a.created)));
   let h='<div class="toolbar"><button class="btn btn-primary" onclick="addSubForm()">+ New submission</button></div>';
   if(!list.length) h+='<div class="card"><div class="empty">Nothing sent yet.<br>Each send gets a tracking number automatically.<br><br><button class="btn btn-primary btn-sm" onclick="addSubForm()">+ Log your first send</button></div></div>';
   else h+='<div class="cards2">';
@@ -2103,14 +2103,7 @@ window.addSub = ()=>{
     if(!Array.isArray(S.subQueue)) S.subQueue = [];
     S.subQueue.push({ uid:'sq'+Date.now().toString(36)+Math.floor(Math.random()*999), ts:Date.now(), by:(S.session && S.session.name) || '', rec:rec, status:'pending' });
     save();
-    try{
-      fetch("https://api.emailjs.com/api/v1.0/email/send",{method:"POST",headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({service_id:EJ_SERVICE,template_id:EJ_TEMPLATE,user_id:EJ_KEY,
-          template_params:{subject:"Submission approval needed \u2014 "+((S.session && S.session.name) || 'A team member')+" (Secure Alert app)",
-            body:(((S.session && S.session.name) || 'A team member')+" logged a submission in the Secure Alert (Fobs) app.\n\nFob: "+fobId+"\nHotel: "+rec.prop+"\nTracking: "+track+"\nStatus: "+rec.status+"\nWhen: "+new Date().toLocaleString()+"\n\nIt is HELD \u2014 the submission is not logged until you approve it. Open the Secure Alert app (Home tab) to Approve or Dismiss it."),
-            to_email:MAIL_TO, name:"Jeremy Levin", email:"Jeremy.levin@loewshotels.com"}})}).catch(()=>{});
-    }catch(e){}
-    closeSheet(); render(); toast("Held for Jeremy's approval \u2014 he's been notified");
+    closeSheet(); render(); subDetail(nu); toast("Submission logged \u2014 tracking "+track);
     return;
   }
   S.subs.push(rec);
@@ -2119,7 +2112,8 @@ window.addSub = ()=>{
   save(); render(); subDetail(nu); toast("Submission logged — tracking "+track);
 };
 window.subDetail = u=>{
-  const s=S.subs.find(x=>x.uid===u); if(!s) return;
+  const s=S.subs.find(x=>x.uid===u) || (function(){ const q=(S.subQueue||[]).find(x=>x.rec && x.rec.uid===u && (canSendFobs() || x.by===(S.session && S.session.name))); return q ? q.rec : null; })();
+  if(!s) return;
   let h='<h2>Tracking: '+esc(s.tracking)+'</h2><div class="sub"><span class="pchip">'+esc(propName(s.prop))+"</span> "+statusBadge(s.status)+"</div>"
     +'<div class="kv"><span>FOB ID</span><b>'+esc(s.fobId)+"</b></div>"
     +(s.num?'<div class="kv"><span>Fob number</span><b>'+esc(s.num)+"</b></div>":"")
@@ -2938,19 +2932,12 @@ window.finalizeShipment = sid=>{
   const sf = shipmentFobs(sh);
   if(!sf.length){ toast('Add at least one fob first'); return; }
   if(submitNeedsApproval()){
-    if(!confirm('Send this shipment to Jeremy for approval? Nothing ships out until he approves it.')) return;
+    if(!confirm('Submit this shipment? The shipped date and FedEx tracking go onto all ' + sf.length + ' fob' + (sf.length === 1 ? '' : 's') + ' when it ships out' + (sh.tracking ? ' (FedEx ' + sh.tracking + ')' : '') + '.')) return;
     if(!Array.isArray(S.actQueue)) S.actQueue = [];
-    if(S.actQueue.some(q=>q.sid === sid && q.status === 'pending')){ toast('Already waiting for Jeremy\u2019s approval'); return; }
+    if(S.actQueue.some(q=>q.sid === sid && q.status === 'pending')){ toast('Already submitted'); return; }
     S.actQueue.push({ uid:'aq'+Date.now().toString(36)+Math.floor(Math.random()*999), ts:Date.now(), by:(S.session && S.session.name) || '', sid:sid, tracking:sh.tracking || '', count:sf.length, status:'pending' });
     save();
-    try{
-      fetch("https://api.emailjs.com/api/v1.0/email/send",{method:"POST",headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({service_id:EJ_SERVICE,template_id:EJ_TEMPLATE,user_id:EJ_KEY,
-          template_params:{subject:"Shipment approval needed \u2014 "+((S.session && S.session.name) || 'A team member')+" (Secure Alert app)",
-            body:(((S.session && S.session.name) || 'A team member')+" wants to finalize a shipment in the Secure Alert (Fobs) app.\n\nFobs: "+sf.length+"\nFedEx tracking: "+(sh.tracking || 'none yet')+"\nWhen: "+new Date().toLocaleString()+"\n\nIt is HELD \u2014 nothing ships until you approve it. Open the Secure Alert app (Home tab) to Approve or Dismiss it."),
-            to_email:MAIL_TO, name:"Jeremy Levin", email:"Jeremy.levin@loewshotels.com"}})}).catch(()=>{});
-    }catch(e){}
-    closeSheet(); render(); toast('Held for Jeremy\u2019s approval \u2014 he\u2019s been notified');
+    closeSheet(); render(); toast('\u2713 Shipment submitted \u2014 ' + sf.length + ' fob' + (sf.length === 1 ? '' : 's'));
     return;
   }
   if(!confirm('Finalize this shipment? It ships out now: the shipped date and FedEx tracking go onto all ' + sf.length + ' fob' + (sf.length === 1 ? '' : 's') + (sh.tracking ? ' (FedEx ' + sh.tracking + ')' : ' (no tracking number yet \u2014 you can add it later)') + '.')) return;
