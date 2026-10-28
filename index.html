@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-build="fob-20261028-1330">
+<html lang="en" data-build="fob-20261028-1420">
 <head>
 <meta charset="UTF-8">
 <meta name="mobile-web-app-capable" content="yes">
@@ -3126,13 +3126,13 @@ function usageStart(){
     const savedId = sessionStorage.getItem('usgId'), savedStart = sessionStorage.getItem('usgStart'), savedMins = parseInt(sessionStorage.getItem('usgMins') || '0', 10) || 0;
     if(savedId && savedStart){
       const dv = usageDevice();
-      usageEntry = { id: savedId, name: nm, start: savedStart, last: new Date().toISOString(), mins: savedMins, type: dv.t, device: dv.d, via: (S.session && S.session.viaPortal) ? 'Portal' : 'PIN' };
+      usageEntry = { id: savedId, name: nm, app: 'Secure Alert', start: savedStart, last: new Date().toISOString(), mins: savedMins, type: dv.t, device: dv.d, via: (S.session && S.session.viaPortal) ? 'Portal' : 'PIN' };
       usageWrite();
       return;
     }
   }catch(e){}
   const dv = usageDevice();
-  usageEntry = { id: 'u-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 7), name: nm, start: new Date().toISOString(), last: new Date().toISOString(), mins: 0, type: dv.t, device: dv.d, via: (S.session && S.session.viaPortal) ? 'Portal' : 'PIN' };
+  usageEntry = { id: 'u-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 7), name: nm, app: 'Secure Alert', start: new Date().toISOString(), last: new Date().toISOString(), mins: 0, type: dv.t, device: dv.d, via: (S.session && S.session.viaPortal) ? 'Portal' : 'PIN' };
   try{ sessionStorage.setItem('usgId', usageEntry.id); sessionStorage.setItem('usgStart', usageEntry.start); sessionStorage.setItem('usgMins', '0'); }catch(e){}
   usageWrite();
 }
@@ -3169,22 +3169,22 @@ window.showUsageLog = async ()=>{
   }catch(e){}
   es = es.slice().sort((a, b)=>String(b.start).localeCompare(String(a.start)));
   const byName = {};
-  es.forEach(e=>{ const p = byName[e.name] = byName[e.name] || { n: 0, mins: 0, last: '', devs: {} }; p.n++; p.mins += e.mins || 0; if(String(e.last) > p.last) p.last = String(e.last); p.devs[e.type] = 1; });
+  es.forEach(e=>{ const p = byName[e.name] = byName[e.name] || { n: 0, mins: 0, last: '', devs: {}, apps: {} }; p.n++; p.mins += e.mins || 0; if(String(e.last) > p.last) p.last = String(e.last); p.devs[e.type] = 1; p.apps[e.app || 'Secure Alert'] = 1; });
   const nowMs = Date.now();
-  let h = '<h2>\uD83D\uDD75 Usage log \u2014 private</h2><div class="sub">Every sign-in to Secure Alert, the device used, and the time spent in the app. Only your profile can see this.</div>';
+  let h = '<h2>\uD83D\uDD75 Usage log \u2014 private</h2><div class="sub">Every sign-in to Secure Alert, Radios and Cameras \u2014 the device used and the time spent in the app. Only your profile can see this.</div>';
   const names = Object.keys(byName).sort((a, b)=>byName[b].mins - byName[a].mins);
   if(!names.length) h += '<div class="note" style="margin-top:10px">No sign-ins recorded yet. New sign-ins appear here from now on.</div>';
   names.forEach(nm=>{
     const p = byName[nm];
     const onNow = p.last && (nowMs - new Date(p.last).getTime() < 3 * 60000);
     h += '<div class="card" style="margin-top:10px"><div style="font-weight:800;color:#0F2440">' + esc(nm) + (onNow ? ' <span style="color:#1F9D55;font-size:12px">\u25CF on now</span>' : '') + '</div>'
-      + '<div class="sub">' + p.n + ' sign-in' + (p.n === 1 ? '' : 's') + ' \u00B7 ' + usageDur(p.mins) + ' total \u00B7 last ' + esc(fmtDT(p.last)) + ' \u00B7 ' + Object.keys(p.devs).join(' + ') + '</div></div>';
+      + '<div class="sub">' + p.n + ' sign-in' + (p.n === 1 ? '' : 's') + ' \u00B7 ' + usageDur(p.mins) + ' total \u00B7 last ' + esc(fmtDT(p.last)) + ' \u00B7 ' + Object.keys(p.devs).join(' + ') + '<br>Apps: ' + Object.keys(p.apps).join(', ') + '</div></div>';
   });
   if(es.length){
     h += '<div style="font-weight:800;color:#0F2440;margin:14px 0 4px">Recent sign-ins</div>'
       + es.slice(0, 40).map(e=>{
         const onNow = nowMs - new Date(e.last).getTime() < 3 * 60000;
-        return '<div class="sub" style="padding:5px 0;border-bottom:1px solid #E4E9F0">' + esc(e.name) + ' \u00B7 ' + esc(e.device) + ' (' + esc(e.type) + ') \u00B7 ' + esc(fmtDT(e.start)) + ' \u00B7 ' + usageDur(e.mins) + (onNow ? ' \u00B7 <span style="color:#1F9D55;font-weight:700">on now</span>' : '') + '</div>';
+        return '<div class="sub" style="padding:5px 0;border-bottom:1px solid #E4E9F0">' + esc(e.name) + ' \u00B7 ' + esc(e.app || 'Secure Alert') + ' \u00B7 ' + esc(e.device) + ' (' + esc(e.type) + ') \u00B7 ' + esc(fmtDT(e.start)) + ' \u00B7 ' + usageDur(e.mins) + (onNow ? ' \u00B7 <span style="color:#1F9D55;font-weight:700">on now</span>' : '') + '</div>';
       }).join('');
   }
   h += '<button class="btn btn-ghost" style="margin-top:12px" onclick="printUsageLog()">\uD83D\uDDA8 Print usage log</button>';
@@ -3194,8 +3194,8 @@ window.showUsageLog = async ()=>{
 window.printUsageLog = ()=>{
   const es = (window._usageEntries || []).slice().sort((a, b)=>String(b.start).localeCompare(String(a.start)));
   let body = '<h1>\uD83D\uDD75 Secure Alert \u2014 Usage Log</h1><h2>Sign-ins, devices and time in the app \u00B7 Printed ' + esc(todayISO()) + ' by Jeremy Levin \u00B7 Private</h2>'
-    + '<table><tr><th>Who</th><th>Device</th><th>Signed in</th><th>Last active</th><th>Time used</th></tr>'
-    + es.map(e=>'<tr><td>' + esc(e.name) + '</td><td>' + esc(e.device) + ' (' + esc(e.type) + ')</td><td>' + esc(fmtDT(e.start)) + '</td><td>' + esc(fmtDT(e.last)) + '</td><td>' + usageDur(e.mins) + '</td></tr>').join('') + '</table>';
+    + '<table><tr><th>Who</th><th>App</th><th>Device</th><th>Signed in</th><th>Last active</th><th>Time used</th></tr>'
+    + es.map(e=>'<tr><td>' + esc(e.name) + '</td><td>' + esc(e.app || 'Secure Alert') + '</td><td>' + esc(e.device) + ' (' + esc(e.type) + ')</td><td>' + esc(fmtDT(e.start)) + '</td><td>' + esc(fmtDT(e.last)) + '</td><td>' + usageDur(e.mins) + '</td></tr>').join('') + '</table>';
   printReport('Secure Alert usage log', body);
 };
 /* === END USAGE LOG === */
