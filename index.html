@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-build="fob-20261028-0845">
+<html lang="en" data-build="fob-20261028-1130">
 <head>
 <meta charset="UTF-8">
 <meta name="mobile-web-app-capable" content="yes">
@@ -693,7 +693,7 @@ function renderDash(){
   const transit = subs.filter(s=>s.status==="Submitted"||s.status==="In Transit").length;
   const attn = n("In Repair")+n("Broken")+n("Warranty")+n("Lost");
   let h = '<div class="brandstrip home" style="background:#fff;border-radius:12px;padding:10px 12px;margin-bottom:10px"><img src="loews-logo-trim.jpg" alt="Loews Hotels" style="height:68px;width:auto;display:block;margin:2px auto 8px"><img src="securalert-logo.jpg" alt="SECURalert" style="width:100%;max-width:520px;display:block;margin:0 auto"></div>'
-    + mailApprovalCard()
+    + mailApprovalCard() + subApprovalCard() + actApprovalCard()
     + '<h2 class="sec" style="margin-top:2px">Today at a glance</h2><div class="row">'
     +'<div class="tile tap" onclick="goFobsNotSent()"><div class="n">'+fobs.filter(f=>!fobOutCount(f)).length+'</div><div class="l">Fobs</div></div>'
     +'<div class="tile tap" onclick="goFobs(\'Assigned\',\'\')"><div class="n">'+n("Assigned")+'</div><div class="l">Assigned</div></div>'
@@ -704,6 +704,7 @@ function renderDash(){
     +'<div class="tile tap" onclick="goDiscarded()"><div class="n" style="color:#4a5568">'+S.fobs.filter(f=>f.discardedAt).length+'</div><div class="l">\uD83D\uDDD1 Trash \u2014 1 year only</div></div>'
     +'<div class="tile tap" onclick="showPrintedFobs()"><div class="n" style="color:#1A365D">'+(S.tagPrints||[]).reduce((a,t)=>a+(t.count||0),0)+'</div><div class="l">\uD83D\uDDA8 Printed fobs</div></div>'
     +'<div class="tile tap" onclick="showShippedFobs()"><div class="n" style="color:#276749">'+S.fobs.filter(f=>f.shipId || f.shipTracking).length+'</div><div class="l">\uD83D\uDE9A Shipped \u2014 FedEx</div></div>'
+    +(canAudit() ? '<div class="tile tap" onclick="showAuditAll()"><div class="n">\uD83D\uDCCB</div><div class="l">Audit \u2014 all properties</div></div>' : '')
     +"</div>"
 
   const fuList = S.fobs.map(f=>({f:f, fi:followInfo(f)})).filter(x=>x.fi && !x.f.discardedAt);
@@ -814,7 +815,7 @@ h += '<div class="card closed"><h3 onclick="toggleCard(this)" style="cursor:poin
       +"<td>"+(pc.length+ct.length)+"</td><td>"+pc.filter(f=>f.status==="Assigned").length+"</td><td>"+ps.length+"</td><td>"+pc.filter(f=>f.status==="Warranty").length+"</td>"+fobCostCell(pc, ctCost, ct.length, nsN)
   });
   h += "<tr style=\"background:#f7f3e3;border-top:2px solid #0F2440\"><td><b>Total \u2014 all hotels</b></td><td><b>"+TOT.n+"</b></td><td><b>"+TOT.a+"</b></td><td><b>"+TOT.s+"</b></td><td><b>"+TOT.w+"</b></td><td><b>$"+TOT.cost.toLocaleString("en-US")+"</b></td><td><b>"+TOT.broke+"</b></td><td><b>"+TOT.ns+"</b></td></tr>";
-  h += '</table></div><button class="btn btn-ghost" onclick="printCostReport()" style="margin-top:8px">Print cost report</button></div>';
+  h += '</table></div><button class="btn btn-ghost" onclick="printCostReport()" style="margin-top:8px">Print cost report</button>' + (canAudit() ? '<button class="btn btn-ghost" onclick="printAuditList()" style="margin-top:8px">\uD83D\uDCCB Print audit list \u2014 all properties</button>' : '') + '</div>';
   // Customer fob tickets (from hotel managers)
   const ctCount = customerTickets.length;
   const ctBadge = ctCount > 0 
@@ -879,13 +880,15 @@ window.toggleBcnPick = (u, ev)=>{ if(ev) ev.stopPropagation(); if(bcnSel[u]){ de
 window.clearBcnSel = ()=>{ bcnSel = {}; renderBeacons(); };
 function canSendFobs(){ return !!(S.session && S.session.name === 'Jeremy Levin'); }
 function isJeremy(){ return !!(S.session && S.session.name === 'Jeremy Levin'); }
+function canAudit(){ const nm = fobSessionName(); return nm === 'Jeremy Levin' || nm === 'Justin Messger' || nm === 'Justin Messenger'; }
 window._histEdit = null;
 function histLocalVal(t){ const s=String(t||''); const m=s.match(/^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2})/); if(m) return m[1]+'T'+m[2]; const d=new Date(s); if(isNaN(d)) return ''; const p=n=>String(n).padStart(2,'0'); return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())+'T'+p(d.getHours())+':'+p(d.getMinutes()); }
 window.openFobHist = u=>{ window._fdPane='hist'; fobDetail(u); };
 window.editHistEntry = (u,idx)=>{ window._histEdit={u:u,i:idx}; window._fdPane='hist'; fobDetail(u); };
 window.cancelHistEdit = u=>{ window._histEdit=null; window._fdPane='hist'; fobDetail(u); };
 window.saveHistEntry = (u,idx)=>{ const f=S.fobs.find(x=>x.uid===u); if(!f||!f.hist||!f.hist[idx]) return; const tx=document.getElementById('he-text'); const wh=document.getElementById('he-when'); const txt=tx?tx.value.trim():''; if(!txt){ toast('History text cannot be empty'); return; } f.hist[idx].e=txt; if(wh&&wh.value){ f.hist[idx].t = wh.value.length===16 ? wh.value+':00' : wh.value; } window._histEdit=null; save(); window._fdPane='hist'; fobDetail(u); render(); toast('History updated'); };
-function mailNeedsApproval(){ return !!(S.session && /duff/i.test(S.session.name)); }
+function submitNeedsApproval(){ return !!(S.session && S.session.name !== 'Jeremy Levin'); }
+function mailNeedsApproval(){ return submitNeedsApproval(); }
 function queueHeldMail(kind){
   if(!Array.isArray(S.mailQueue)) S.mailQueue = [];
   const jobs = kind==='test' ? null : mailJobs();
@@ -932,6 +935,48 @@ window.approveMail = uid => {
      .catch(err=>{ toast("Send failed: "+((err&&err.message)||'network')+" \u2014 still waiting, try again"); });
 };
 window.dismissMail = uid => { S.mailQueue = (S.mailQueue||[]).filter(x=>x.uid!==uid); save(); renderDash(); toast("Dismissed \u2014 email not sent"); };
+function subApprovalCard(){
+  if(!canSendFobs()) return '';
+  const pend = (S.subQueue||[]).filter(q=>q.status==='pending');
+  if(!pend.length) return '';
+  let h = '<div style="background:#fff5eb;border:2px solid #dd6b20;border-radius:14px;padding:14px;margin-bottom:12px"><h2 class="sec" style="margin-top:0;color:#9c4221">\uD83D\uDCE6 Submission approvals waiting ('+pend.length+')</h2>';
+  pend.forEach(q=>{
+    const r = q.rec || {};
+    h += '<div style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:10px 12px;margin-bottom:8px"><b>Submission \u2014 tracking '+esc(r.tracking || '\u2014')+'</b><div class="note">From: '+esc(q.by)+' \u00B7 '+new Date(q.ts).toLocaleString()+'<br>Fob '+esc(r.fobId || '\u2014')+' \u00B7 '+esc(propName(r.prop || ''))+' \u00B7 '+esc(r.status || '')+(r.notes ? '<br>'+esc(r.notes) : '')+'</div>'
+      +'<div style="display:flex;gap:8px;margin-top:8px"><button class="btn btn-gold btn-sm" style="width:auto;margin:0" onclick="approveSub(\''+q.uid+'\')">\u2713 Approve &amp; log it</button><button class="btn btn-sm" style="width:auto;margin:0" onclick="dismissSub(\''+q.uid+'\')">Dismiss</button></div></div>';
+  });
+  return h + '</div>';
+}
+window.approveSub = uid => {
+  const q = (S.subQueue||[]).find(x=>x.uid===uid); if(!q || !q.rec) return;
+  const rec = q.rec;
+  rec.hist = rec.hist || [];
+  rec.hist.push({t:nowLocal(), e:'Approved by Jeremy Levin'});
+  S.subs.push(rec);
+  const f = S.fobs.find(x=>x.fobId.toLowerCase()===String(rec.fobId).toLowerCase());
+  if(f){ if(rec.num && !f.num) f.num = rec.num; f.hist = f.hist || []; f.hist.push({t:nowLocal(), e:'Submitted \u2014 tracking ' + rec.tracking}); }
+  S.subQueue = S.subQueue.filter(x=>x.uid!==uid);
+  save(); render(); renderDash(); toast('Approved \u2014 submission logged');
+};
+window.dismissSub = uid => { S.subQueue = (S.subQueue||[]).filter(x=>x.uid!==uid); save(); renderDash(); toast('Dismissed \u2014 submission not logged'); };
+function actApprovalCard(){
+  if(!canSendFobs()) return '';
+  const pend = (S.actQueue||[]).filter(q=>q.status==='pending');
+  if(!pend.length) return '';
+  let h = '<div style="background:#fff5eb;border:2px solid #dd6b20;border-radius:14px;padding:14px;margin-bottom:12px"><h2 class="sec" style="margin-top:0;color:#9c4221">\uD83D\uDE9A Shipment approvals waiting ('+pend.length+')</h2>';
+  pend.forEach(q=>{
+    h += '<div style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:10px 12px;margin-bottom:8px"><b>Finalize shipment \u2014 '+esc(String(q.count || 0))+' fob'+(q.count === 1 ? '' : 's')+'</b><div class="note">From: '+esc(q.by)+' \u00B7 '+new Date(q.ts).toLocaleString()+'<br>FedEx tracking: '+esc(q.tracking || 'none yet')+'</div>'
+      +'<div style="display:flex;gap:8px;margin-top:8px"><button class="btn btn-gold btn-sm" style="width:auto;margin:0" onclick="approveFinalize(\''+q.uid+'\')">\u2713 Approve &amp; finalize</button><button class="btn btn-sm" style="width:auto;margin:0" onclick="dismissFinalize(\''+q.uid+'\')">Dismiss</button></div></div>';
+  });
+  return h + '</div>';
+}
+window.approveFinalize = uid => {
+  const q = (S.actQueue||[]).find(x=>x.uid===uid); if(!q) return;
+  S.actQueue = S.actQueue.filter(x=>x.uid!==uid); save();
+  finalizeShipment(q.sid);
+  renderDash();
+};
+window.dismissFinalize = uid => { S.actQueue = (S.actQueue||[]).filter(x=>x.uid!==uid); save(); renderDash(); toast('Dismissed \u2014 shipment not finalized'); };
 window.toggleFobPick = (u, ev)=>{ if(ev) ev.stopPropagation();
   if(fobSel[u]){ delete fobSel[u]; }
   else {
@@ -1191,7 +1236,7 @@ window.fobDetail = u=>{
     +'<div class="kv"><span>Assigned to</span><b>'+esc(f.staff||"—")+"</b></div>"
     +'<div class="kv"><span>Shift</span><b>'+esc(f.shift||"—")+"</b></div>"
     +'<div class="kv"><span>Department</span><b>'+esc(f.dept||"—")+"</b></div>"
-    +'<div class="kv"><span>Last test</span><b>'+fmtD(f.battery)+"</b></div>"
+    +'<div class="kv"><span>Last test</span><b>'+fmtD(f.battery)+(f.battBy ? " \u00B7 by "+esc(f.battBy) : "")+"</b></div>"
     +'<div class="kv"><span>In service</span><b>'+(f.inService?fmtD(f.inService):"\u2014 not set")+"</b></div>"
     +(wi?'<div class="kv"><span>Warranty</span><b>'+(wi.out?'<span style="color:#B3261E;font-weight:800">Not Under Warranty 1 Year</span>':(wi.state==="expired"?'<span style="color:#B3261E;font-weight:800">EXPIRED '+fmtD(wi.endStr)+'</span>':'Ends '+fmtD(wi.endStr)+' \u2014 '+wi.days+' days left'))+"</b></div>":"")
     +(f.sentToVendor?'<div class="kv"><span>SecurAlert</span><b class="sentline">\u2713 Sent '+esc(f.sentWhen||'')+' — waiting for response'+(f.sentRpt?' ('+esc(f.sentRpt)+')':'')+'</b></div>':"")
@@ -1406,7 +1451,7 @@ window.replaceFob = u=>{
 };
 window.battTest = u=>{
   const f=S.fobs.find(x=>x.uid===u); if(!f) return;
-  f.battery=todayISO(); f.hist.push({t:nowLocal(), e:"Battery test passed"}); save(); window._fdPane='ship'; fobDetail(u); render(); toast("Battery test logged");
+  f.battery=todayISO(); f.battBy = fobSessionName() || ""; f.hist.push({t:nowLocal(), e:"Battery test passed" + (f.battBy ? " (by " + f.battBy + ")" : "")}); save(); window._fdPane='ship'; fobDetail(u); render(); toast("Battery test logged");
 };
 window.fobFilePick = (input, u, tag)=>{
   const f = S.fobs.find(x=>x.uid===u); if(!f) return;
@@ -1618,6 +1663,84 @@ window.toggleTrashPick = (u, ev)=>{ if(ev) ev.stopPropagation();
 };
 window.trashSelAll = ()=>{ window._trashSel = window._trashSel || new Set(); (window._trashUids || []).forEach(u=>window._trashSel.add(u)); render(); };
 window.trashSelNone = ()=>{ window._trashSel = new Set(); render(); };
+window.printAuditList = ()=>{
+  const live = S.fobs.filter(f=>!f.discardedAt);
+  if(!live.length){ toast('No fobs to audit'); return; }
+  const now = new Date();
+  let body = '<h1>\uD83D\uDCCB Secure Alert \u2014 Fob Audit List</h1>'
+    + '<h2>All properties \u00B7 ' + live.length + ' fobs in service<br>Date: ' + esc(todayISO()) + ' \u00B7 Time: ' + esc(now.toLocaleTimeString()) + ' \u00B7 Printed by ' + esc(fobSessionName() || '\u2014') + '</h2>'
+    + '<p class="doc-meta">Walk each property and check off every fob. Note anything missing or different and hand the sheet back to the Security Systems Technology team.</p>';
+  PROPS.forEach(c=>{
+    const pf = live.filter(f=>f.prop===c).slice().sort((a, b)=>{ const an = String(a.num || ''), bn = String(b.num || ''); const ai = parseInt(an, 10), bi = parseInt(bn, 10); if(!isNaN(ai) && !isNaN(bi)) return ai - bi; return an.localeCompare(bn); });
+    if(!pf.length) return;
+    body += '<h3 style="margin:16px 0 4px">' + esc(propName(c)) + ' (' + esc(c) + ') \u2014 ' + pf.length + ' fobs</h3>'
+      + '<table><tr><th style="width:26px">\u2713</th><th>Fob #</th><th>Fob ID</th><th>Status</th><th>Department</th><th>Assigned to</th><th>Last test</th><th>Tested by</th><th>Notes</th></tr>'
+      + pf.map(f=>'<tr><td>\u2610</td><td>' + esc(f.num || '\u2014') + '</td><td>' + esc(f.fobId) + '</td><td>' + esc(f.status) + ((f.also && f.also.length) ? ' + ' + esc(f.also.join(', ')) : '') + '</td><td>' + esc(f.dept || '\u2014') + '</td><td>' + esc(f.staff || '\u2014') + '</td><td>' + esc(f.battery || '\u2014') + '</td><td>' + esc(f.battBy || '\u2014') + '</td><td></td></tr>').join('')
+      + '</table>';
+    const pb = (S.beacons || []).filter(b=>b.prop===c);
+    if(pb.length){
+      body += '<h3 style="margin:12px 0 4px">Beacons at ' + esc(propName(c)) + ' \u2014 ' + pb.length + '</h3>'
+        + '<table><tr><th style="width:26px">\u2713</th><th>Beacon</th><th>Area</th><th>Status</th><th>Battery tested</th><th>Tested by</th><th>Notes</th></tr>'
+        + pb.map(b=>'<tr><td>\u2610</td><td>' + esc(b.beaconId) + '</td><td>' + esc(b.area || '\u2014') + '</td><td>' + esc(b.status || '\u2014') + '</td><td>' + esc(fmtD(b.battDate)) + '</td><td>' + esc(b.battBy || '\u2014') + '</td><td></td></tr>').join('')
+        + '</table>';
+    }
+  });
+  body += '<p class="doc-meta" style="margin-top:14px">Discarded fobs on file (kept one year): ' + S.fobs.filter(f=>f.discardedAt).length + ' \u2014 see the Trash list in the app.</p>';
+  printReport('Secure Alert fob audit list', body);
+};
+window.showAuditAll = async ()=>{
+  if(!canAudit()){ toast('The audit is for Jeremy and Justin only'); return; }
+  toast('Building the audit\u2026');
+  const yr = new Date().getFullYear();
+  let insp = [];
+  try{
+    const reqs = [];
+    for(let m = 1; m <= 12; m++){
+      const id = 'inspections-' + yr + '-' + String(m).padStart(2, '0');
+      reqs.push(fetch(SB_URL + '/rest/v1/app_records?id=eq.' + id + '&select=data', { headers: { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY } }).then(r=>r.json()).then(rows=>{ if(rows && rows[0] && rows[0].data && Array.isArray(rows[0].data.entries)) insp = insp.concat(rows[0].data.entries); }).catch(()=>{}));
+    }
+    await Promise.all(reqs);
+  }catch(e){}
+  insp.sort((a, b)=>String(a.date || '').localeCompare(String(b.date || '')));
+  const live = S.fobs.filter(f=>!f.discardedAt), bcs = S.beacons || [];
+  const now = new Date();
+  const head = 'Yearly audit \u00B7 ' + yr + ' \u00B7 Built ' + now.toLocaleDateString() + ' ' + now.toLocaleTimeString() + ' by ' + (fobSessionName() || '\u2014');
+  let body = '<h1>\uD83D\uDCCB Secure Alert \u2014 Yearly Audit</h1><h2>All properties \u00B7 ' + live.length + ' fobs in service \u00B7 ' + bcs.length + ' beacons \u00B7 ' + insp.length + ' inspection log entries (' + yr + ')<br>' + esc(head) + '</h2>'
+    + '<p class="doc-meta">Fobs and beacons with the name of who did each battery test, plus the daily property inspection log for the year.</p>';
+  let text = 'SECURE ALERT \u2014 YEARLY AUDIT \u2014 ALL PROPERTIES\n' + head + '\n' + live.length + ' fobs in service \u00B7 ' + bcs.length + ' beacons \u00B7 ' + insp.length + ' inspection log entries (' + yr + ')\n';
+  PROPS.forEach(c=>{
+    const pf = live.filter(f=>f.prop===c).slice().sort((a, b)=>{ const an = String(a.num || ''), bn = String(b.num || ''); const ai = parseInt(an, 10), bi = parseInt(bn, 10); if(!isNaN(ai) && !isNaN(bi)) return ai - bi; return an.localeCompare(bn); });
+    const pb = bcs.filter(b=>b.prop===c);
+    const pi = insp.filter(e=>e.hotel===c);
+    if(!pf.length && !pb.length && !pi.length) return;
+    body += '<h3 style="margin:18px 0 4px">' + esc(propName(c)) + ' (' + esc(c) + ')</h3>';
+    text += '\n=== ' + propName(c) + ' (' + c + ') ===\n';
+    if(pf.length){
+      body += '<table><tr><th style="width:26px">\u2713</th><th>Fob #</th><th>Fob ID</th><th>Status</th><th>Department</th><th>Assigned to</th><th>Last test</th><th>Tested by</th><th>Notes</th></tr>'
+        + pf.map(f=>'<tr><td>\u2610</td><td>' + esc(f.num || '\u2014') + '</td><td>' + esc(f.fobId) + '</td><td>' + esc(f.status) + ((f.also && f.also.length) ? ' + ' + esc(f.also.join(', ')) : '') + '</td><td>' + esc(f.dept || '\u2014') + '</td><td>' + esc(f.staff || '\u2014') + '</td><td>' + esc(f.battery || '\u2014') + '</td><td>' + esc(f.battBy || '\u2014') + '</td><td></td></tr>').join('') + '</table>';
+      text += 'FOBS (' + pf.length + ')\n' + pf.map(f=>'- #' + (f.num || '\u2014') + ' ' + f.fobId + ' \u00B7 ' + f.status + ' \u00B7 Last test ' + (f.battery || '\u2014') + ' by ' + (f.battBy || '\u2014')).join('\n') + '\n';
+    }
+    if(pb.length){
+      body += '<div style="font-weight:800;color:#0F2440;margin:10px 0 2px">Beacons (' + pb.length + ')</div>'
+        + '<table><tr><th style="width:26px">\u2713</th><th>Beacon</th><th>Area</th><th>Status</th><th>Battery tested</th><th>Tested by</th><th>Notes</th></tr>'
+        + pb.map(b=>'<tr><td>\u2610</td><td>' + esc(b.beaconId) + '</td><td>' + esc(b.area || '\u2014') + '</td><td>' + esc(b.status || '\u2014') + '</td><td>' + esc(fmtD(b.battDate)) + '</td><td>' + esc(b.battBy || '\u2014') + '</td><td></td></tr>').join('') + '</table>';
+      text += 'BEACONS (' + pb.length + ')\n' + pb.map(b=>'- ' + b.beaconId + ' \u00B7 ' + (b.area || '\u2014') + ' \u00B7 Battery tested ' + fmtD(b.battDate) + ' by ' + (b.battBy || '\u2014')).join('\n') + '\n';
+    }
+    if(pi.length){
+      body += '<div style="font-weight:800;color:#0F2440;margin:10px 0 2px">Daily inspection log \u2014 ' + yr + ' (' + pi.length + ')</div>'
+        + '<table><tr><th>Date</th><th>Category</th><th>Inspector</th><th>Logged by</th><th>Notes</th></tr>'
+        + pi.map(e=>'<tr><td>' + esc(e.date || '\u2014') + '</td><td>' + esc(e.category || '\u2014') + '</td><td>' + esc(e.inspector || '\u2014') + '</td><td>' + esc(e.by || '\u2014') + '</td><td>' + esc(e.notes || '\u2014') + '</td></tr>').join('') + '</table>';
+      text += 'INSPECTION LOG ' + yr + ' (' + pi.length + ')\n' + pi.map(e=>'- ' + (e.date || '\u2014') + ' \u00B7 ' + (e.category || '\u2014') + ' \u00B7 Inspector ' + (e.inspector || '\u2014') + ' \u00B7 Logged by ' + (e.by || '\u2014') + (e.notes ? ' \u00B7 ' + e.notes : '')).join('\n') + '\n';
+    }
+  });
+  const other = insp.filter(e=>PROPS.indexOf(e.hotel) < 0);
+  if(other.length){ body += '<p class="doc-meta" style="margin-top:12px">Also logged this year under Lakewood / All properties / Other: ' + other.length + ' entries (see the Inspect app).</p>'; text += '\nAlso logged under Lakewood / All / Other: ' + other.length + ' entries.\n'; }
+  body += '<p class="doc-meta" style="margin-top:14px">Discarded fobs on file (kept one year): ' + S.fobs.filter(f=>f.discardedAt).length + ' \u2014 see the Trash list in the app.</p>';
+  window._auditHtml = body; window._auditText = text;
+  openSheet('<h2>\uD83D\uDCCB Audit \u2014 all properties</h2><div class="sub">' + esc(head) + '<br>' + live.length + ' fobs in service \u00B7 ' + bcs.length + ' beacons \u00B7 ' + insp.length + ' inspection log entries (' + yr + ')</div>'
+    + '<div style="display:flex;gap:8px;margin:10px 0"><button class="btn btn-gold" style="flex:1;width:auto;margin:0" onclick="printReport(\'Secure Alert yearly audit \u2014 all properties\', window._auditHtml)">\uD83D\uDDA8 Print audit</button><button class="btn" style="flex:1;width:auto;margin:0;background:#0F2440" onclick="composeMail(\'Secure Alert yearly audit \u2014 all properties \u2014 ' + yr + '\', window._auditText, \'ALL\')">\u2709\uFE0F Email audit</button></div>'
+    + '<div class="note">Only you and Justin can see this audit button.</div>');
+};
 window.showPrintedFobs = ()=>{
   const log = (S.tagPrints || []).slice().reverse();
   let body = '';
@@ -1972,10 +2095,25 @@ window.addSub = ()=>{
   if(!track){ alert("Tracking number is required."); return; }
   const nu=uid("sub");
   const num=document.getElementById("ns-num").value.trim();
-  S.subs.push({ uid:nu, fobId:fobId, num:num, prop:document.getElementById("ns-prop").value,
+  const rec={ uid:nu, fobId:fobId, num:num, prop:document.getElementById("ns-prop").value,
     date:document.getElementById("ns-date").value||todayISO(), tracking:track,
     status:document.getElementById("ns-status").value, notes:document.getElementById("ns-notes").value.trim(),
-    created:nowLocal(), hist:[{t:nowLocal(), e:"Submission created"}] });
+    created:nowLocal(), hist:[{t:nowLocal(), e:"Submission created"}] };
+  if(submitNeedsApproval()){
+    if(!Array.isArray(S.subQueue)) S.subQueue = [];
+    S.subQueue.push({ uid:'sq'+Date.now().toString(36)+Math.floor(Math.random()*999), ts:Date.now(), by:(S.session && S.session.name) || '', rec:rec, status:'pending' });
+    save();
+    try{
+      fetch("https://api.emailjs.com/api/v1.0/email/send",{method:"POST",headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({service_id:EJ_SERVICE,template_id:EJ_TEMPLATE,user_id:EJ_KEY,
+          template_params:{subject:"Submission approval needed \u2014 "+((S.session && S.session.name) || 'A team member')+" (Secure Alert app)",
+            body:(((S.session && S.session.name) || 'A team member')+" logged a submission in the Secure Alert (Fobs) app.\n\nFob: "+fobId+"\nHotel: "+rec.prop+"\nTracking: "+track+"\nStatus: "+rec.status+"\nWhen: "+new Date().toLocaleString()+"\n\nIt is HELD \u2014 the submission is not logged until you approve it. Open the Secure Alert app (Home tab) to Approve or Dismiss it."),
+            to_email:MAIL_TO, name:"Jeremy Levin", email:"Jeremy.levin@loewshotels.com"}})}).catch(()=>{});
+    }catch(e){}
+    closeSheet(); render(); toast("Held for Jeremy's approval \u2014 he's been notified");
+    return;
+  }
+  S.subs.push(rec);
   const f=S.fobs.find(x=>x.fobId.toLowerCase()===fobId.toLowerCase());
   if(f){ if(num && !f.num) f.num=num; f.hist.push({t:nowLocal(), e:"Submitted — tracking "+track}); }
   save(); render(); subDetail(nu); toast("Submission logged — tracking "+track);
@@ -2799,6 +2937,22 @@ window.finalizeShipment = sid=>{
   const sh = (S.shipments || []).find(s=>s.uid === sid); if(!sh || sh.status !== 'preparing') return;
   const sf = shipmentFobs(sh);
   if(!sf.length){ toast('Add at least one fob first'); return; }
+  if(submitNeedsApproval()){
+    if(!confirm('Send this shipment to Jeremy for approval? Nothing ships out until he approves it.')) return;
+    if(!Array.isArray(S.actQueue)) S.actQueue = [];
+    if(S.actQueue.some(q=>q.sid === sid && q.status === 'pending')){ toast('Already waiting for Jeremy\u2019s approval'); return; }
+    S.actQueue.push({ uid:'aq'+Date.now().toString(36)+Math.floor(Math.random()*999), ts:Date.now(), by:(S.session && S.session.name) || '', sid:sid, tracking:sh.tracking || '', count:sf.length, status:'pending' });
+    save();
+    try{
+      fetch("https://api.emailjs.com/api/v1.0/email/send",{method:"POST",headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({service_id:EJ_SERVICE,template_id:EJ_TEMPLATE,user_id:EJ_KEY,
+          template_params:{subject:"Shipment approval needed \u2014 "+((S.session && S.session.name) || 'A team member')+" (Secure Alert app)",
+            body:(((S.session && S.session.name) || 'A team member')+" wants to finalize a shipment in the Secure Alert (Fobs) app.\n\nFobs: "+sf.length+"\nFedEx tracking: "+(sh.tracking || 'none yet')+"\nWhen: "+new Date().toLocaleString()+"\n\nIt is HELD \u2014 nothing ships until you approve it. Open the Secure Alert app (Home tab) to Approve or Dismiss it."),
+            to_email:MAIL_TO, name:"Jeremy Levin", email:"Jeremy.levin@loewshotels.com"}})}).catch(()=>{});
+    }catch(e){}
+    closeSheet(); render(); toast('Held for Jeremy\u2019s approval \u2014 he\u2019s been notified');
+    return;
+  }
   if(!confirm('Finalize this shipment? It ships out now: the shipped date and FedEx tracking go onto all ' + sf.length + ' fob' + (sf.length === 1 ? '' : 's') + (sh.tracking ? ' (FedEx ' + sh.tracking + ')' : ' (no tracking number yet \u2014 you can add it later)') + '.')) return;
   sh.status = 'finalized';
   sh.finalizedAt = nowLocal();
@@ -2957,7 +3111,7 @@ function renderBeacons(){
       +'<div class="fob-meta"><span class="pchip">'+esc(propName(x.prop))+"</span>"+' <span class="pchip">'+beaconTypeOf(x)+"</span>"
       +(x.area? " "+esc(x.area) : "")
       +(x.lat? '<br>📍 GPS pinned <a class="bmap" target="_blank" rel="noopener" onclick="event.stopPropagation()" href="https://www.google.com/maps?q='+x.lat+","+x.lng+'">🗺️ Map</a>' : '<br><span style="color:#b7791f;font-weight:700">No GPS pin yet</span>')
-      +(x.photo? "<br>\uD83D\uDCF7 Photo attached" : "")+"<br>Battery tested: "+fmtD(x.battDate)
+      +(x.photo? "<br>\uD83D\uDCF7 Photo attached" : "")+"<br>Battery tested: "+fmtD(x.battDate)+(x.battBy ? " \u00B7 by "+esc(x.battBy) : "")
       +(x.status==="Unplugged" && x.unpluggedAt? "<br>\uD83D\uDD0C Unplugged: "+fmtTimeOnly(x.unpluggedAt) : "")
       +"</div></div>";
     });
@@ -3011,7 +3165,7 @@ window.beaconDetail = u=>{
   let h='<h2>'+beaconIcon(b)+' '+esc(b.beaconId)+'</h2><div class="sub"><span class="pchip">'+esc(propName(b.prop))+"</span> "+beaconBadge(b.status)+"</div>"
     +'<div class="kv"><span>Type</span><b>'+beaconTypeOf(b)+"</b></div>"
     +'<div class="kv"><span>Area</span><b>'+esc(b.area||"—")+"</b></div>"
-    +'<div class="kv"><span>Battery tested</span><b>'+fmtD(b.battDate)+"</b></div>"
+    +'<div class="kv"><span>Battery tested</span><b>'+fmtD(b.battDate)+(b.battBy ? " \u00B7 by "+esc(b.battBy) : "")+"</b></div>"
     +(b.status==="Unplugged" && b.unpluggedAt? '<div class="kv"><span>Unplugged</span><b>\uD83D\uDD0C '+fmtTimeOnly(b.unpluggedAt)+"</b></div>" : "")
     +'<div class="kv"><span>Installed</span><b>'+fmtD(b.instDate)+"</b></div>"
     +(b.notes? '<div class="kv"><span>Notes</span><b>'+esc(b.notes)+"</b></div>" : "")
@@ -3035,7 +3189,8 @@ window.beaconDetail = u=>{
 window.beaconBattToday = u=>{
   const b=S.beacons.find(x=>x.uid===u); if(!b) return;
   b.battDate = todayISO();
-  b.hist = b.hist || []; b.hist.push({t:nowLocal(), e:"Battery tested"});
+  b.battBy = fobSessionName() || "";
+  b.hist = b.hist || []; b.hist.push({t:nowLocal(), e:"Battery tested" + (b.battBy ? " (by " + b.battBy + ")" : "")});
   save(); beaconDetail(u); render(); toast("Battery test logged");
 };
 window.pinBeacon = u=>{
@@ -3238,8 +3393,8 @@ window.printBeaconList = ()=>{
   let body = '<h1>Beacons Report</h1><h2>' + list.length + ' device' + (list.length===1 ? "" : "s") + ' \u00B7 ' + list.filter(b=>b.lat).length + ' GPS pinned \u00B7 ' + list.filter(b=>b.status==="Unplugged").length + ' unplugged \u00B7 ' + list.filter(b=>(b.battDate||"").slice(0,10)===_tds).length + ' battery tested today \u00B7 Printed ' + esc(fmtDT(new Date().toISOString())) + ' by ' + esc(fobSessionName() || "\u2014") + '</h2>';
   Object.keys(byProp).sort().forEach(pn=>{
     body += '<h2 style="margin-top:20px;color:#0F2440;font-weight:bold">' + esc(propName(pn)) + ' (' + byProp[pn].length + ')</h2>'
-      + '<table><tr><th>ID</th><th>Type</th><th>Area</th><th>Status</th><th>Battery tested</th><th>GPS pin</th></tr>'
-      + byProp[pn].map(b=>'<tr><td>' + esc(b.beaconId) + '</td><td>' + esc(beaconTypeOf(b)) + '</td><td>' + esc(b.area || "\u2014") + '</td><td>' + esc(b.status || "\u2014") + '</td><td>' + esc(fmtD(b.battDate)) + '</td><td>' + ((b.lat && b.lng) ? Number(b.lat).toFixed(5) + ", " + Number(b.lng).toFixed(5) : "No pin") + '</td></tr>').join("")
+      + '<table><tr><th>ID</th><th>Type</th><th>Area</th><th>Status</th><th>Battery tested</th><th>Tested by</th><th>GPS pin</th></tr>'
+      + byProp[pn].map(b=>'<tr><td>' + esc(b.beaconId) + '</td><td>' + esc(beaconTypeOf(b)) + '</td><td>' + esc(b.area || "\u2014") + '</td><td>' + esc(b.status || "\u2014") + '</td><td>' + esc(fmtD(b.battDate)) + '</td><td>' + esc(b.battBy || "\u2014") + '</td><td>' + ((b.lat && b.lng) ? Number(b.lat).toFixed(5) + ", " + Number(b.lng).toFixed(5) : "No pin") + '</td></tr>').join("")
       + '</table>';
   });
   if(!list.length) body += '<p>No beacons match the current filter.</p>';
@@ -3254,7 +3409,7 @@ window.emailBeaconList = ()=>{
   let body = "BEACONS REPORT \u2014 " + list.length + " devices, " + list.filter(b=>b.lat).length + " GPS pinned, " + list.filter(b=>b.status==="Unplugged").length + " unplugged, " + list.filter(b=>(b.battDate||"").slice(0,10)===_tds2).length + " battery tested today\n";
   Object.keys(byProp).sort().forEach(pn=>{
     body += "\n" + propName(pn) + " (" + byProp[pn].length + ")\n";
-    byProp[pn].forEach(b=>{ body += "- " + b.beaconId + " (" + beaconTypeOf(b) + ") \u00B7 " + (b.area || "\u2014") + " \u00B7 " + (b.status || "\u2014") + " \u00B7 Battery tested " + fmtD(b.battDate) + " \u00B7 " + ((b.lat && b.lng) ? "Pin " + Number(b.lat).toFixed(5) + ", " + Number(b.lng).toFixed(5) : "No GPS pin") + "\n"; });
+    byProp[pn].forEach(b=>{ body += "- " + b.beaconId + " (" + beaconTypeOf(b) + ") \u00B7 " + (b.area || "\u2014") + " \u00B7 " + (b.status || "\u2014") + " \u00B7 Battery tested " + fmtD(b.battDate) + (b.battBy ? " by " + b.battBy : "") + " \u00B7 " + ((b.lat && b.lng) ? "Pin " + Number(b.lat).toFixed(5) + ", " + Number(b.lng).toFixed(5) : "No GPS pin") + "\n"; });
   });
   composeMail("Beacons report \u2014 " + list.length + " devices" + (picked.length ? " (selected)" : ""), body, "ALL");
 };
