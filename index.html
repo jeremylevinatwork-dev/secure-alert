@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-build="fob-20261028-1215">
+<html lang="en" data-build="fob-20261028-1245">
 <head>
 <meta charset="UTF-8">
 <meta name="mobile-web-app-capable" content="yes">
@@ -1668,31 +1668,85 @@ window.toggleTrashPick = (u, ev)=>{ if(ev) ev.stopPropagation();
 };
 window.trashSelAll = ()=>{ window._trashSel = window._trashSel || new Set(); (window._trashUids || []).forEach(u=>window._trashSel.add(u)); render(); };
 window.trashSelNone = ()=>{ window._trashSel = new Set(); render(); };
+/* === AUDIT FORM (shared layout) === */
+function auditCover(title, sub, meta){
+  return '<div style="background:#0F2440;color:#fff;padding:18px 20px;border-radius:6px">'
+    + '<div style="font-size:24px;font-weight:800;letter-spacing:.4px">' + title + '</div>'
+    + '<div style="color:#C9A227;font-weight:700;margin-top:2px">' + sub + '</div>'
+    + '<div style="font-size:13px;margin-top:8px;color:#D7DEE8;line-height:1.5">' + meta + '</div></div>';
+}
+function auditLegend(){
+  const row = (a, b)=>'<tr><td style="font-weight:700;color:#0F2440;white-space:nowrap;padding:5px 10px 5px 0;border:0;font-size:14px">' + a + '</td><td style="padding:5px 0;border:0;font-size:14px">' + b + '</td></tr>';
+  return '<div style="border:1.5px solid #0F2440;border-radius:6px;padding:12px 16px;margin-top:14px">'
+    + '<div style="font-weight:800;color:#0F2440;letter-spacing:.4px">HOW TO READ THIS AUDIT</div>'
+    + '<table style="margin-top:6px">' 
+    + row('\u2713 Found', 'Tick the box when you have seen the fob or beacon in person at the property.')
+    + row('Fob #', 'The tag number printed on the device.')
+    + row('Fob ID', 'The electronic ID of the fob. SecurAlert identifies every fob by this number.')
+    + row('Status', 'Where the fob is right now \u2014 In service, Broken, In repair, Returned, and so on. Anything after a + is an extra mark on the same fob.')
+    + row('Last test / Tested by', 'The most recent battery test on record, and the person who ran it. This is the proof of testing for the audit. Tests logged before this was tracked may show no name.')
+    + row('Inspection log', 'The daily property inspection entries the team recorded during the year.')
+    + row('Discarded', 'Fobs out of service. They are kept on file for one year, counted at the end of this form, and are not part of the audit.')
+    + '</table></div>';
+}
+function auditPropBand(c, nf, nb, ni){
+  return '<div style="background:#0F2440;color:#fff;padding:10px 14px;margin:24px 0 0;border-radius:6px">'
+    + '<span style="font-size:17px;font-weight:800">' + esc(propName(c)) + '</span> <span style="color:#C9A227;font-weight:700">(' + esc(c) + ')</span>'
+    + '<span style="float:right;font-size:13px;color:#D7DEE8">' + nf + ' fobs \u00B7 ' + nb + ' beacons \u00B7 ' + ni + ' inspections</span></div>';
+}
+function auditSection(label, hint){
+  return '<div style="font-weight:800;color:#0F2440;margin:14px 0 0;font-size:15px">' + label + '</div>'
+    + (hint ? '<div style="font-size:12.5px;color:#666;margin:1px 0 2px">' + hint + '</div>' : '');
+}
+function auditFobTable(pf){
+  return '<table><tr><th style="width:26px">\u2713</th><th>Fob #</th><th>Fob ID</th><th>Status</th><th>Department</th><th>Assigned to</th><th>Last test</th><th>Tested by</th><th>Notes</th></tr>'
+    + pf.map(f=>'<tr><td>\u2610</td><td>' + esc(f.num || '\u2014') + '</td><td>' + esc(f.fobId) + '</td><td>' + esc(f.status) + ((f.also && f.also.length) ? ' + ' + esc(f.also.join(', ')) : '') + '</td><td>' + esc(f.dept || '\u2014') + '</td><td>' + esc(f.staff || '\u2014') + '</td><td>' + esc(f.battery || '\u2014') + '</td><td>' + esc(f.battBy || '\u2014') + '</td><td></td></tr>').join('')
+    + '</table>';
+}
+function auditBeaconTable(pb){
+  return '<table><tr><th style="width:26px">\u2713</th><th>Beacon</th><th>Area</th><th>Status</th><th>Battery tested</th><th>Tested by</th><th>Notes</th></tr>'
+    + pb.map(b=>'<tr><td>\u2610</td><td>' + esc(b.beaconId) + '</td><td>' + esc(b.area || '\u2014') + '</td><td>' + esc(b.status || '\u2014') + '</td><td>' + esc(fmtD(b.battDate)) + '</td><td>' + esc(b.battBy || '\u2014') + '</td><td></td></tr>').join('')
+    + '</table>';
+}
+function auditInspTable(pi){
+  return '<table><tr><th>Date</th><th>Category</th><th>Inspector</th><th>Logged by</th><th>Notes</th></tr>'
+    + pi.map(e=>'<tr><td>' + esc(e.date || '\u2014') + '</td><td>' + esc(e.category || '\u2014') + '</td><td>' + esc(e.inspector || '\u2014') + '</td><td>' + esc(e.by || '\u2014') + '</td><td>' + esc(e.notes || '\u2014') + '</td></tr>').join('')
+    + '</table>';
+}
+function auditSignoff(){
+  const line = 'border-bottom:1.5px solid #999;height:26px';
+  return '<div style="border:1.5px solid #0F2440;border-radius:6px;padding:14px 16px;margin-top:26px">'
+    + '<div style="font-weight:800;color:#0F2440;letter-spacing:.4px">AUDIT SIGN-OFF</div>'
+    + '<table style="margin-top:8px"><tr><td style="border:0;padding:4px 8px 0 0;width:55%"><div style="' + line + '"></div><div style="font-size:12px;color:#666;margin-top:3px">Audit completed by (print name and sign)</div></td>'
+    + '<td style="border:0;padding:4px 0 0 8px;width:45%"><div style="' + line + '"></div><div style="font-size:12px;color:#666;margin-top:3px">Date</div></td></tr>'
+    + '<tr><td style="border:0;padding:12px 8px 0 0"><div style="' + line + '"></div><div style="font-size:12px;color:#666;margin-top:3px">Reviewed by (print name and sign)</div></td>'
+    + '<td style="border:0;padding:12px 0 0 8px"><div style="' + line + '"></div><div style="font-size:12px;color:#666;margin-top:3px">Date</div></td></tr></table>'
+    + '<div style="margin-top:14px;font-size:13px;color:#444">Follow-ups needed:</div>'
+    + '<div style="border-bottom:1.5px solid #bbb;height:24px"></div><div style="border-bottom:1.5px solid #bbb;height:24px"></div>'
+    + '</div>';
+}
+/* === END AUDIT FORM === */
 window.printAuditList = ()=>{
   const live = S.fobs.filter(f=>!f.discardedAt);
   if(!live.length){ toast('No fobs to audit'); return; }
   const now = new Date();
-  let body = '<h1>\uD83D\uDCCB Secure Alert \u2014 Fob Audit List</h1>'
-    + '<h2>All properties \u00B7 ' + live.length + ' fobs in service<br>Date: ' + esc(todayISO()) + ' \u00B7 Time: ' + esc(now.toLocaleTimeString()) + ' \u00B7 Printed by ' + esc(fobSessionName() || '\u2014') + '</h2>'
-    + '<p class="doc-meta">Walk each property and check off every fob. Note anything missing or different and hand the sheet back to the Security Systems Technology team.</p>';
+  const yr = now.getFullYear();
+  const sortF = arr => arr.slice().sort((a, b)=>{ const an = String(a.num || ''), bn = String(b.num || ''); const ai = parseInt(an, 10), bi = parseInt(bn, 10); if(!isNaN(ai) && !isNaN(bi)) return ai - bi; return an.localeCompare(bn); });
+  let body = auditCover('SECURE ALERT \u2014 FOB AUDIT LIST', 'Security Systems Technology \u00B7 Walk-through check sheet \u00B7 All properties', live.length + ' fobs in service \u00B7 ' + (S.beacons || []).length + ' beacons<br>Printed ' + esc(todayISO()) + ' \u00B7 ' + esc(now.toLocaleTimeString()) + ' \u00B7 Printed by ' + esc(fobSessionName() || '\u2014') + '<br>Walk each property, find every fob and beacon in person, and tick \u2713 as you verify it. Note anything missing or different in the Notes column and hand the sheet back to the Security Systems Technology team.')
+    + auditLegend();
   PROPS.forEach(c=>{
-    const pf = live.filter(f=>f.prop===c).slice().sort((a, b)=>{ const an = String(a.num || ''), bn = String(b.num || ''); const ai = parseInt(an, 10), bi = parseInt(bn, 10); if(!isNaN(ai) && !isNaN(bi)) return ai - bi; return an.localeCompare(bn); });
-    if(!pf.length) return;
-    body += '<h3 style="margin:16px 0 4px">' + esc(propName(c)) + ' (' + esc(c) + ') \u2014 ' + pf.length + ' fobs</h3>'
-      + '<table><tr><th style="width:26px">\u2713</th><th>Fob #</th><th>Fob ID</th><th>Status</th><th>Department</th><th>Assigned to</th><th>Last test</th><th>Tested by</th><th>Notes</th></tr>'
-      + pf.map(f=>'<tr><td>\u2610</td><td>' + esc(f.num || '\u2014') + '</td><td>' + esc(f.fobId) + '</td><td>' + esc(f.status) + ((f.also && f.also.length) ? ' + ' + esc(f.also.join(', ')) : '') + '</td><td>' + esc(f.dept || '\u2014') + '</td><td>' + esc(f.staff || '\u2014') + '</td><td>' + esc(f.battery || '\u2014') + '</td><td>' + esc(f.battBy || '\u2014') + '</td><td></td></tr>').join('')
-      + '</table>';
+    const pf = sortF(live.filter(f=>f.prop===c));
     const pb = (S.beacons || []).filter(b=>b.prop===c);
-    if(pb.length){
-      body += '<h3 style="margin:12px 0 4px">Beacons at ' + esc(propName(c)) + ' \u2014 ' + pb.length + '</h3>'
-        + '<table><tr><th style="width:26px">\u2713</th><th>Beacon</th><th>Area</th><th>Status</th><th>Battery tested</th><th>Tested by</th><th>Notes</th></tr>'
-        + pb.map(b=>'<tr><td>\u2610</td><td>' + esc(b.beaconId) + '</td><td>' + esc(b.area || '\u2014') + '</td><td>' + esc(b.status || '\u2014') + '</td><td>' + esc(fmtD(b.battDate)) + '</td><td>' + esc(b.battBy || '\u2014') + '</td><td></td></tr>').join('')
-        + '</table>';
-    }
+    if(!pf.length && !pb.length) return;
+    body += auditPropBand(c, pf.length, pb.length, 0).replace(' \u00B7 0 inspections', '');
+    if(pf.length) body += auditSection('Emergency fobs \u2014 ' + pf.length, 'One row per fob in service at this property.') + auditFobTable(pf);
+    if(pb.length) body += auditSection('Beacons \u2014 ' + pb.length, 'Wall beacons that relay the fob signal.') + auditBeaconTable(pb);
   });
-  body += '<p class="doc-meta" style="margin-top:14px">Discarded fobs on file (kept one year): ' + S.fobs.filter(f=>f.discardedAt).length + ' \u2014 see the Trash list in the app.</p>';
+  body += '<p class="doc-meta" style="margin-top:14px">Discarded fobs on file (kept one year): ' + S.fobs.filter(f=>f.discardedAt).length + ' \u2014 see the Trash list in the app. Discarded fobs are not audited.</p>'
+    + auditSignoff();
   printReport('Secure Alert fob audit list', body);
 };
+
 window.showAuditAll = async ()=>{
   if(!canAudit()){ toast('The audit is for Jeremy and Justin only'); return; }
   toast('Building the audit\u2026');
@@ -1710,42 +1764,53 @@ window.showAuditAll = async ()=>{
   const live = S.fobs.filter(f=>!f.discardedAt), bcs = S.beacons || [];
   const now = new Date();
   const head = 'Yearly audit \u00B7 ' + yr + ' \u00B7 Built ' + now.toLocaleDateString() + ' ' + now.toLocaleTimeString() + ' by ' + (fobSessionName() || '\u2014');
-  let body = '<h1>\uD83D\uDCCB Secure Alert \u2014 Yearly Audit</h1><h2>All properties \u00B7 ' + live.length + ' fobs in service \u00B7 ' + bcs.length + ' beacons \u00B7 ' + insp.length + ' inspection log entries (' + yr + ')<br>' + esc(head) + '</h2>'
-    + '<p class="doc-meta">Fobs and beacons with the name of who did each battery test, plus the daily property inspection log for the year.</p>';
-  let text = 'SECURE ALERT \u2014 YEARLY AUDIT \u2014 ALL PROPERTIES\n' + head + '\n' + live.length + ' fobs in service \u00B7 ' + bcs.length + ' beacons \u00B7 ' + insp.length + ' inspection log entries (' + yr + ')\n';
-  PROPS.forEach(c=>{
-    const pf = live.filter(f=>f.prop===c).slice().sort((a, b)=>{ const an = String(a.num || ''), bn = String(b.num || ''); const ai = parseInt(an, 10), bi = parseInt(bn, 10); if(!isNaN(ai) && !isNaN(bi)) return ai - bi; return an.localeCompare(bn); });
+  const sortF = arr => arr.slice().sort((a, b)=>{ const an = String(a.num || ''), bn = String(b.num || ''); const ai = parseInt(an, 10), bi = parseInt(bn, 10); if(!isNaN(ai) && !isNaN(bi)) return ai - bi; return an.localeCompare(bn); });
+  const perProp = PROPS.map(c=>{
+    const pf = sortF(live.filter(f=>f.prop===c));
     const pb = bcs.filter(b=>b.prop===c);
     const pi = insp.filter(e=>e.hotel===c);
-    if(!pf.length && !pb.length && !pi.length) return;
-    body += '<h3 style="margin:18px 0 4px">' + esc(propName(c)) + ' (' + esc(c) + ')</h3>';
-    text += '\n=== ' + propName(c) + ' (' + c + ') ===\n';
-    if(pf.length){
-      body += '<table><tr><th style="width:26px">\u2713</th><th>Fob #</th><th>Fob ID</th><th>Status</th><th>Department</th><th>Assigned to</th><th>Last test</th><th>Tested by</th><th>Notes</th></tr>'
-        + pf.map(f=>'<tr><td>\u2610</td><td>' + esc(f.num || '\u2014') + '</td><td>' + esc(f.fobId) + '</td><td>' + esc(f.status) + ((f.also && f.also.length) ? ' + ' + esc(f.also.join(', ')) : '') + '</td><td>' + esc(f.dept || '\u2014') + '</td><td>' + esc(f.staff || '\u2014') + '</td><td>' + esc(f.battery || '\u2014') + '</td><td>' + esc(f.battBy || '\u2014') + '</td><td></td></tr>').join('') + '</table>';
-      text += 'FOBS (' + pf.length + ')\n' + pf.map(f=>'- #' + (f.num || '\u2014') + ' ' + f.fobId + ' \u00B7 ' + f.status + ' \u00B7 Last test ' + (f.battery || '\u2014') + ' by ' + (f.battBy || '\u2014')).join('\n') + '\n';
+    return { c, pf, pb, pi };
+  }).filter(x=>x.pf.length || x.pb.length || x.pi.length);
+  const totF = perProp.reduce((a, x)=>a + x.pf.length, 0), totB = perProp.reduce((a, x)=>a + x.pb.length, 0), totI = perProp.reduce((a, x)=>a + x.pi.length, 0);
+  let body = auditCover('SECURE ALERT \u2014 YEARLY AUDIT ' + yr, 'Security Systems Technology \u00B7 All properties', 'Prepared by ' + esc(fobSessionName() || '\u2014') + ' \u00B7 ' + esc(now.toLocaleDateString()) + ' \u00B7 ' + esc(now.toLocaleTimeString()) + '<br>This audit covers every Code Green emergency fob and beacon in service at all ' + PROPS.length + ' properties, who last battery-tested each one, and the daily property inspection log for ' + yr + '.')
+    + auditLegend()
+    + '<div style="font-weight:800;color:#0F2440;margin:20px 0 0;font-size:16px;letter-spacing:.3px">AUDIT SUMMARY \u2014 ALL PROPERTIES</div>'
+    + '<div style="font-size:12.5px;color:#666;margin:1px 0 2px">One row per property. The detail for each property follows below the summary.</div>'
+    + '<table><tr><th>Property</th><th style="text-align:center">Fobs in service</th><th style="text-align:center">Beacons</th><th style="text-align:center">Inspection entries (' + yr + ')</th></tr>'
+    + perProp.map(x=>'<tr><td><b>' + esc(propName(x.c)) + '</b> (' + esc(x.c) + ')</td><td style="text-align:center">' + x.pf.length + '</td><td style="text-align:center">' + x.pb.length + '</td><td style="text-align:center">' + x.pi.length + '</td></tr>').join('')
+    + '<tr style="background:#EEF2F7;font-weight:800"><td>TOTAL \u2014 all properties</td><td style="text-align:center">' + totF + '</td><td style="text-align:center">' + totB + '</td><td style="text-align:center">' + totI + '</td></tr></table>';
+  let text = 'SECURE ALERT \u2014 YEARLY AUDIT ' + yr + ' \u2014 ALL PROPERTIES\n' + head + '\n'
+    + 'HOW TO READ: Fob # is the tag number on the device; Fob ID is its electronic ID; Last test / Tested by is the most recent battery test on record and who ran it (the proof of testing).\n'
+    + 'SUMMARY: ' + totF + ' fobs in service \u00B7 ' + totB + ' beacons \u00B7 ' + totI + ' inspection entries at the ' + PROPS.length + ' properties.\n';
+  perProp.forEach(x=>{
+    body += auditPropBand(x.c, x.pf.length, x.pb.length, x.pi.length);
+    text += '\n=== ' + propName(x.c) + ' (' + x.c + ') \u2014 ' + x.pf.length + ' fobs \u00B7 ' + x.pb.length + ' beacons \u00B7 ' + x.pi.length + ' inspections ===\n';
+    if(x.pf.length){
+      body += auditSection('A \u2014 Emergency fobs (' + x.pf.length + ')', 'Tick \u2713 as each fob is verified. "Tested by" is who last ran its battery test.') + auditFobTable(x.pf);
+      text += 'FOBS (' + x.pf.length + ')\n' + x.pf.map(f=>'- #' + (f.num || '\u2014') + ' ' + f.fobId + ' \u00B7 ' + f.status + ' \u00B7 Last test ' + (f.battery || '\u2014') + ' by ' + (f.battBy || '\u2014')).join('\n') + '\n';
     }
-    if(pb.length){
-      body += '<div style="font-weight:800;color:#0F2440;margin:10px 0 2px">Beacons (' + pb.length + ')</div>'
-        + '<table><tr><th style="width:26px">\u2713</th><th>Beacon</th><th>Area</th><th>Status</th><th>Battery tested</th><th>Tested by</th><th>Notes</th></tr>'
-        + pb.map(b=>'<tr><td>\u2610</td><td>' + esc(b.beaconId) + '</td><td>' + esc(b.area || '\u2014') + '</td><td>' + esc(b.status || '\u2014') + '</td><td>' + esc(fmtD(b.battDate)) + '</td><td>' + esc(b.battBy || '\u2014') + '</td><td></td></tr>').join('') + '</table>';
-      text += 'BEACONS (' + pb.length + ')\n' + pb.map(b=>'- ' + b.beaconId + ' \u00B7 ' + (b.area || '\u2014') + ' \u00B7 Battery tested ' + fmtD(b.battDate) + ' by ' + (b.battBy || '\u2014')).join('\n') + '\n';
+    if(x.pb.length){
+      body += auditSection('B \u2014 Beacons (' + x.pb.length + ')', 'Wall beacons that relay the fob signal.') + auditBeaconTable(x.pb);
+      text += 'BEACONS (' + x.pb.length + ')\n' + x.pb.map(b=>'- ' + b.beaconId + ' \u00B7 ' + (b.area || '\u2014') + ' \u00B7 Battery tested ' + fmtD(b.battDate) + ' by ' + (b.battBy || '\u2014')).join('\n') + '\n';
     }
-    if(pi.length){
-      body += '<div style="font-weight:800;color:#0F2440;margin:10px 0 2px">Daily inspection log \u2014 ' + yr + ' (' + pi.length + ')</div>'
-        + '<table><tr><th>Date</th><th>Category</th><th>Inspector</th><th>Logged by</th><th>Notes</th></tr>'
-        + pi.map(e=>'<tr><td>' + esc(e.date || '\u2014') + '</td><td>' + esc(e.category || '\u2014') + '</td><td>' + esc(e.inspector || '\u2014') + '</td><td>' + esc(e.by || '\u2014') + '</td><td>' + esc(e.notes || '\u2014') + '</td></tr>').join('') + '</table>';
-      text += 'INSPECTION LOG ' + yr + ' (' + pi.length + ')\n' + pi.map(e=>'- ' + (e.date || '\u2014') + ' \u00B7 ' + (e.category || '\u2014') + ' \u00B7 Inspector ' + (e.inspector || '\u2014') + ' \u00B7 Logged by ' + (e.by || '\u2014') + (e.notes ? ' \u00B7 ' + e.notes : '')).join('\n') + '\n';
+    if(x.pi.length){
+      body += auditSection('C \u2014 Daily inspection log \u2014 ' + yr + ' (' + x.pi.length + ')', 'Entries the team logged at this property during the audit year.') + auditInspTable(x.pi);
+      text += 'INSPECTION LOG ' + yr + ' (' + x.pi.length + ')\n' + x.pi.map(e=>'- ' + (e.date || '\u2014') + ' \u00B7 ' + (e.category || '\u2014') + ' \u00B7 Inspector ' + (e.inspector || '\u2014') + ' \u00B7 Logged by ' + (e.by || '\u2014') + (e.notes ? ' \u00B7 ' + e.notes : '')).join('\n') + '\n';
     }
   });
   const other = insp.filter(e=>PROPS.indexOf(e.hotel) < 0);
-  if(other.length){ body += '<p class="doc-meta" style="margin-top:12px">Also logged this year under Lakewood / All properties / Other: ' + other.length + ' entries (see the Inspect app).</p>'; text += '\nAlso logged under Lakewood / All / Other: ' + other.length + ' entries.\n'; }
-  body += '<p class="doc-meta" style="margin-top:14px">Discarded fobs on file (kept one year): ' + S.fobs.filter(f=>f.discardedAt).length + ' \u2014 see the Trash list in the app.</p>';
+  if(other.length){ body += '<p class="doc-meta" style="margin-top:12px">Also logged this year under Lakewood / All properties / Other: ' + other.length + ' entries (see the Inspect app). These sit outside the ' + PROPS.length + ' hotel properties, so they are not in the summary above.</p>'; text += '\nAlso logged under Lakewood / All / Other: ' + other.length + ' entries.\n'; }
+  body += '<p class="doc-meta" style="margin-top:14px">Discarded fobs on file (kept one year): ' + S.fobs.filter(f=>f.discardedAt).length + ' \u2014 see the Trash list in the app. Discarded fobs are not audited.</p>'
+    + auditSignoff()
+    + '<p class="foot">Generated by the Secure Alert app \u00B7 Security Systems Technology \u00B7 ' + esc(now.toLocaleDateString()) + '</p>';
+  text += '\nDiscarded fobs on file (kept one year): ' + S.fobs.filter(f=>f.discardedAt).length + ' (not audited).\n';
   window._auditHtml = body; window._auditText = text;
   openSheet('<h2>\uD83D\uDCCB Audit \u2014 all properties</h2><div class="sub">' + esc(head) + '<br>' + live.length + ' fobs in service \u00B7 ' + bcs.length + ' beacons \u00B7 ' + insp.length + ' inspection log entries (' + yr + ')</div>'
+    + '<div class="note" style="margin-top:8px">The printed form is the official one: it opens with a summary of every property and a short guide that explains what every column means, then the detail for each property, and a sign-off block at the end.</div>'
     + '<div style="display:flex;gap:8px;margin:10px 0"><button class="btn btn-gold" style="flex:1;width:auto;margin:0" onclick="printReport(\'Secure Alert yearly audit \u2014 all properties\', window._auditHtml)">\uD83D\uDDA8 Print audit</button><button class="btn" style="flex:1;width:auto;margin:0;background:#0F2440" onclick="composeMail(\'Secure Alert yearly audit \u2014 all properties \u2014 ' + yr + '\', window._auditText, \'ALL\')">\u2709\uFE0F Email audit</button></div>'
     + '<div class="note">Only you and Justin can see this audit button.</div>');
 };
+
 window.showPrintedFobs = ()=>{
   const log = (S.tagPrints || []).slice().reverse();
   let body = '';
