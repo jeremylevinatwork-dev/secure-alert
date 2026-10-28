@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-build="fob-20261028-1200">
+<html lang="en" data-build="fob-20261028-1215">
 <head>
 <meta charset="UTF-8">
 <meta name="mobile-web-app-capable" content="yes">
@@ -401,6 +401,11 @@ window.editCustomerTicket = async function(idx){
 let sbSyncTimer = null;
 var sbDirty = false; // true after a local save until its cloud push succeeds — pulls must never overwrite unsaved local work
 var sbPullTick = 0; // egress gate counter (stamp-check polls)
+var sbRetryTimer = null;
+function sbRetrySoon(){
+  if(sbRetryTimer) return;
+  sbRetryTimer = setTimeout(function(){ sbRetryTimer = null; if(sbDirty) sbPush(); }, 15000);
+}
 function sbBadge(online, syncing){
   var el = document.getElementById('sb-sync-badge');
   if(!el){
@@ -453,8 +458,8 @@ async function sbPush(){
       var now = new Date().toISOString();
       try{ localStorage.setItem(LS_KEY + '-cloud-ts', now); }catch(e){}
       sbBadge(true, false);
-    } else sbBadge(false, false);
-  }catch(e){ sbBadge(false, false); }
+    } else { sbBadge(false, false); sbRetrySoon(); }
+  }catch(e){ sbBadge(false, false); sbRetrySoon(); }
 }
 function recCount(d){ d = d || {}; return (d.fobs ? d.fobs.length : 0) + (d.subs ? d.subs.length : 0) + (d.docs ? d.docs.length : 0) + (d.beacons ? d.beacons.length : 0) + (d.arrivals ? d.arrivals.length : 0) + (d.tickets ? d.tickets.length : 0); }
 async function sbPull(){
@@ -509,7 +514,7 @@ async function sbPull(){
     }
     if(localTs > cloudTs){ sbPush(); return; }
     sbBadge(true, false);
-  }catch(e){}
+  }catch(e){ if(sbDirty) sbRetrySoon(); }
 }
 function sbSchedulePush(){
   if(sbSyncTimer) clearTimeout(sbSyncTimer);
@@ -518,6 +523,7 @@ function sbSchedulePush(){
 setTimeout(sbPull, 2000);
 setInterval(sbPull, 30000);
 document.addEventListener('visibilitychange', function(){ if(!document.hidden) sbPull(); });
+window.addEventListener('online', function(){ if(sbDirty) sbPush(); sbPull(); });
 /* === END SUPABASE LIVE SYNC === */
 let S = { fobs:[], subs:[], docs:[], beacons:[], arrivals:[], propNames:{}, seq:1 , team:[{name:"Jeremy Levin",pin:"1245"},{name:"Alexander Duff",pin:"0132"},{name:"Dominique Black",pin:"2195"},{name:"Sean Forester",pin:"3867"},{name:"Justin Messger",pin:"5132"}], session:null};
 // Portal SSO: if user logged in via Loews portal, skip app login
