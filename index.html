@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-build="fob-20261029-0938">
+<html lang="en" data-build="fob-20261102-1218">
 <head>
 <meta charset="UTF-8">
 <meta name="mobile-web-app-capable" content="yes">
@@ -279,7 +279,7 @@ const FOB_STATUS = ["Available","Assigned","Returned","In Repair","Broken","Warr
 const ISSUE_STATUS = ["Broken","In Repair","Warranty","Not Able to Charge","Charger Port Broken","Lost","Not Under Warranty 1 Year","Pick up from property"];
 const FOB_DEPTS = ["Security","HSKP","Eng"];
 const SUB_STATUS = ["Submitted","In Transit","Received","Closed"];
-const DOC_TYPES = ["Sign-out sheet","Incident report","Battery test log","Maintenance request","Training record","Other"];
+const DOC_TYPES = ["Warranty submission","Sign-out sheet","Incident report","Battery test log","Maintenance request","Training record","Other"];
 const DOC_STATUS = ["Sent","Delivered","Acknowledged"];
 const METHODS = ["Email","Hand delivered","Printed / filed","Courier","Other"];
 const LS_KEY = "lsat-v1";
@@ -2360,22 +2360,41 @@ window.delSub = u=>{
 
 /* ---------- documents ---------- */
 function renderDocs(){
-  const list=S.docs.filter(d=>inFilter(d.prop)).sort((a,b)=>String(b.sentAt).localeCompare(String(a.sentAt)));
-  let h='<div class="toolbar"><button class="btn btn-primary" onclick="addDocForm()">+ Log document sent</button></div>';
-  if(!list.length) h+='<div class="card"><div class="empty">No documents logged yet.<br><br><button class="btn btn-primary btn-sm" onclick="addDocForm()">+ Log your first document</button></div></div>';
-  else h+='<div class="cards2">';
-  list.forEach(d=>{
-    h+='<div class="card doc" onclick="docDetail(\''+d.uid+'\')">'
-      +'<div class="fob-top"><span class="doc-title">'+esc(d.title)+"</span>"+statusBadge(d.status)+"</div>"
-      +'<div class="doc-meta"><span class="pchip">'+esc(propName(d.prop))+"</span>"+esc(d.type)
-      +" · To: <b>"+esc(d.recipient||"—")+"</b><br>Sent "+fmtDT(d.sentAt)+" via "+esc(d.method)
-      +(d.fobId?'<br>Linked fob: <b>'+esc(d.fobId)+"</b>":"")+"</div></div>";
-  });
-  if(list.length) h+="</div>";
+  ensureDocNos();
+  let h='<div class="toolbar"><button class="btn btn-primary" onclick="addDocForm()">+ File a document</button></div>'
+    +'<input type="text" id="docsearch" placeholder="Search title, tracking #, recipient\u2026" value="'+esc(window._docSearch||"")+'" oninput="docSearchSet(this.value)" style="width:100%;padding:10px;border:1.5px solid #cbd5e0;border-radius:9px;font-size:16px;margin:0 0 10px;background:#fff;color:#1a202c">'
+    +'<div id="doclist"></div>';
   document.getElementById("tab-docs").innerHTML=h;
+  renderDocList();
+}
+function renderDocList(){
+  const el=document.getElementById("doclist"); if(!el) return;
+  const q=(window._docSearch||"").toLowerCase();
+  const list=S.docs.filter(d=>inFilter(d.prop)).filter(d=>!q || ((d.title||"")+" "+(d.docNo||"")+" "+(d.recipient||"")+" "+(d.type||"")).toLowerCase().includes(q))
+    .sort((a,b)=>String(b.sentAt).localeCompare(String(a.sentAt)));
+  if(!list.length){ el.innerHTML='<div class="card"><div class="empty">No documents filed yet.<br><br><button class="btn btn-primary btn-sm" onclick="addDocForm()">+ File your first document</button></div></div>'; return; }
+  let h="";
+  PROPS.forEach(p=>{
+    const items=list.filter(d=>d.prop===p);
+    if(!items.length) return;
+    h+='<h3 style="margin:14px 0 8px;font-size:15px">\uD83D\uDCC1 '+esc(propName(p))+' <span class="note">('+items.length+')</span></h3><div class="cards2">';
+    items.forEach(d=>{
+      h+='<div class="card doc" onclick="docDetail(\''+d.uid+'\')">'
+        +'<div class="fob-top"><span class="doc-title">'+esc(d.title)+"</span>"+statusBadge(d.status)+"</div>"
+        +'<div style="margin:2px 0 4px"><span style="background:#FFF8E1;border:1.5px solid #c9a227;color:#744210;border-radius:6px;padding:1px 7px;font-weight:700;font-size:12.5px;letter-spacing:.3px">'+esc(d.docNo||"")+'</span>'
+        +((d.files&&d.files.length)?' <span class="badge" style="background:#EBF4FF;color:#1A365D">\uD83D\uDCCE '+d.files.length+'</span>':"")+'</div>'
+        +'<div class="doc-meta"><span class="pchip">'+esc(propName(d.prop))+"</span>"+esc(d.type)
+        +" \u00B7 To: <b>"+esc(d.recipient||"\u2014")+"</b><br>Sent "+fmtDT(d.sentAt)+" via "+esc(d.method)
+        +(d.fobId?'<br>Linked fob: <b>'+esc(d.fobId)+"</b>":"")+"</div></div>";
+    });
+    h+="</div>";
+  });
+  if(!h) h='<div class="card"><div class="empty">Nothing matches that search.</div></div>';
+  el.innerHTML=h;
 }
 window.addDocForm = ()=>{
-  openSheet('<h2>Log document sent</h2><div class="sub">Track when a document goes out.</div>'
+  window._ndFile=null;
+  openSheet('<h2>File a document</h2><div class="sub">It gets its own tracking number for its property.</div>'
     +'<label>Document title <span class="req">*</span></label><input type="text" id="nd-title" placeholder="e.g. FOB-1042 sign-out sheet">'
     +'<label>Type</label><select id="nd-type">'+DOC_TYPES.map(t=>'<option>'+t+"</option>").join("")+"</select>"
     +'<label>Hotel</label><select id="nd-prop">'+PROPS.map(c=>'<option value="'+c+'"'+(c===filter?" selected":"")+">"+esc(propLabel(c))+"</option>").join("")+"</select>"
@@ -2385,6 +2404,7 @@ window.addDocForm = ()=>{
     +'<label>Status</label><select id="nd-status">'+DOC_STATUS.map(s=>'<option>'+s+"</option>").join("")+"</select>"
     +'<label>Linked FOB ID (optional)</label><div class="idrow"><input type="text" id="nd-fob" placeholder="FOB ID"><button type="button" class="btn btn-ghost btn-sm" onclick="openScanner(\'nd-fob\')">Scan QR</button></div>'
     +'<label>Notes</label><input type="text" id="nd-notes">'
+    +'<label>Attach the document (photo of the signed sheet, or a PDF)</label><input type="file" id="nd-file" accept="image/*,.pdf" onchange="ndFilePick(this)"><div class="note" id="nd-fname"></div>'
     +'<button class="btn btn-primary" onclick="addDoc()">Save</button>'
     +'<button class="btn btn-ghost" onclick="closeSheet()">Cancel</button>');
 };
@@ -2392,16 +2412,23 @@ window.addDoc = ()=>{
   const title=document.getElementById("nd-title").value.trim();
   if(!title){ alert("Document title is required."); return; }
   const nu=uid("doc");
-  S.docs.push({ uid:nu, title:title, type:document.getElementById("nd-type").value,
+  S.docs.push({ uid:nu, docNo:nextDocNo(document.getElementById("nd-prop").value, document.getElementById("nd-sent").value||nowLocal()), files:[], title:title, type:document.getElementById("nd-type").value,
     prop:document.getElementById("nd-prop").value, recipient:document.getElementById("nd-recip").value.trim(),
     sentAt:document.getElementById("nd-sent").value||nowLocal(), method:document.getElementById("nd-method").value,
     status:document.getElementById("nd-status").value, fobId:document.getElementById("nd-fob").value.trim(),
     notes:document.getElementById("nd-notes").value.trim() });
-  save(); render(); docDetail(nu); toast("Document logged");
+  const nd=S.docs.find(x=>x.uid===nu);
+  if(window._ndFile && nd){ nd.files=[window._ndFile]; window._ndFile=null; }
+  save(); render(); docDetail(nu); toast("Document filed \u2014 "+(nd?nd.docNo:""));
 };
 window.docDetail = u=>{
   const d=S.docs.find(x=>x.uid===u); if(!d) return;
+  if(!Array.isArray(d.files)) d.files=[];
+  const filesHtml = d.files.length ? d.files.map((dc,i)=>'<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:7px 2px;border-bottom:1px solid #EDF0F4"><span style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+((dc.type||"").indexOf("image/")===0?'\uD83D\uDDBC ':'\uD83D\uDCC4 ')+esc(dc.name||"File")+'</span><button class="btn btn-ghost btn-sm" style="width:auto;margin:0" onclick="viewDocFile(\''+d.uid+'\','+i+')">View</button></div>').join("") : '<div class="note">No file attached yet \u2014 attach the signed sheet so the whole team can see it here.</div>';
   let h='<h2>'+esc(d.title)+'</h2><div class="sub"><span class="pchip">'+esc(propName(d.prop))+"</span> "+esc(d.type)+" · "+statusBadge(d.status)+"</div>"
+    +'<div class="kv"><span>Tracking #</span><b style="color:#744210">'+esc(d.docNo||"")+'</b></div>'
+    +"<h2 class='sec'>Filed document</h2>"+filesHtml
+    +'<label class="btn btn-primary btn-sm" style="display:block;text-align:center;cursor:pointer">\uD83D\uDCCE Attach scan / photo<input type="file" accept="image/*,.pdf" multiple hidden onchange="docFilePick(this,\''+d.uid+'\')"></label>'
     +'<label>Sent to</label><input type="text" id="dd-recipient" value="'+esc(d.recipient||"")+'">'
     +'<div class="kv"><span>Date / time sent</span><b>'+fmtDT(d.sentAt)+"</b></div>"
     +'<label>Method</label><select id="dd-method">'+METHODS.map(m=>'<option'+(m===d.method?" selected":"")+">"+m+"</option>").join("")+"</select>"
@@ -2852,6 +2879,70 @@ function nextReport(prop){
   const n=String((S.rptBy[h]=(S.rptBy[h]||0)+1)).padStart(4,"0"); save();
   return "RPT-"+h+"-"+day+"-"+n;
 }
+/* ---------- document file folder: tracking numbers + filed scans ---------- */
+function nextDocNo(prop, whenStr){
+  const h=String(prop||"ALL").toUpperCase();
+  S.docSeqBy=S.docSeqBy||{};
+  const n=String((S.docSeqBy[h]=(S.docSeqBy[h]||0)+1)).padStart(4,"0");
+  let day="";
+  const m=String(whenStr||"").match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if(m) day=m[1]+m[2]+m[3];
+  else { const d=new Date(), p=x=>String(x).padStart(2,"0"); day=""+d.getFullYear()+p(d.getMonth()+1)+p(d.getDate()); }
+  return "DOC-"+h+"-"+day+"-"+n;
+}
+function ensureDocNos(){
+  let changed=false;
+  const sorted=S.docs.slice().sort((a,b)=>String(a.sentAt||"").localeCompare(String(b.sentAt||"")));
+  sorted.forEach(d=>{ if(!d.docNo){ d.docNo=nextDocNo(d.prop, d.sentAt); changed=true; } if(!Array.isArray(d.files)) d.files=[]; });
+  if(changed) save();
+}
+function readDocFile(file, cb){
+  if((file.type||"").indexOf("image/")===0){
+    const url=URL.createObjectURL(file); const img=new Image();
+    img.onload=()=>{ try{
+      const mx=1280, sc=Math.min(1, mx/Math.max(img.width, img.height));
+      const cv=document.createElement("canvas"); cv.width=Math.max(1,Math.round(img.width*sc)); cv.height=Math.max(1,Math.round(img.height*sc));
+      cv.getContext("2d").drawImage(img,0,0,cv.width,cv.height);
+      URL.revokeObjectURL(url);
+      cb({name:file.name, type:"image/jpeg", data:cv.toDataURL("image/jpeg",0.72)});
+    }catch(e){ alert("Could not read that picture."); } };
+    img.onerror=()=>{ URL.revokeObjectURL(url); alert("Could not read that picture."); };
+    img.src=url;
+  } else {
+    if(file.size>1500000){ alert("That file is too big to attach (about 1.5 MB max). Pictures are shrunk automatically."); return; }
+    const r=new FileReader();
+    r.onload=()=>cb({name:file.name, type:file.type||"file", data:r.result});
+    r.onerror=()=>alert("Could not read that file.");
+    r.readAsDataURL(file);
+  }
+}
+window.docFilePick=(input,u)=>{
+  const d=S.docs.find(x=>x.uid===u); if(!d) return;
+  const files=Array.prototype.slice.call(input.files||[]); input.value="";
+  if(!Array.isArray(d.files)) d.files=[];
+  files.forEach(file=>{ readDocFile(file, dc=>{ d.files.push(dc); save(); docDetail(u); toast("Attached "+dc.name); }); });
+};
+window.viewDocFile=(u,i)=>{
+  const d=S.docs.find(x=>x.uid===u); if(!d||!d.files||!d.files[i]) return;
+  const dc=d.files[i];
+  const isImg=(dc.type||"").indexOf("image/")===0;
+  openSheet('<h2 style="font-size:16px">'+(isImg?'\uD83D\uDDBC ':'\uD83D\uDCC4 ')+esc(dc.name||"File")+'</h2>'
+    +'<div class="sub">'+esc(d.docNo||"")+' \u00B7 '+esc(propName(d.prop))+'</div>'
+    +(isImg?'<img src="'+dc.data+'" alt="" style="width:100%;border-radius:10px;display:block">':'<div style="font-size:44px;text-align:center;padding:16px 0">\uD83D\uDCC4</div>')
+    +'<a class="btn btn-gold" style="display:block;text-align:center;margin-top:12px" href="'+dc.data+'" download="'+esc(dc.name||"file")+'">Open / download</a>'
+    +'<button class="btn btn-danger" onclick="delDocFile(\''+u+'\','+i+')">Remove file</button>'
+    +'<button class="btn btn-ghost" onclick="docDetail(\''+u+'\')">\u2190 Back to document</button>');
+};
+window.delDocFile=(u,i)=>{
+  const d=S.docs.find(x=>x.uid===u); if(!d||!d.files||!d.files[i]) return;
+  if(!confirm("Remove this file from the document?")) return;
+  d.files.splice(i,1); save(); docDetail(u); toast("File removed");
+};
+window.ndFilePick=(input)=>{
+  const file=input.files&&input.files[0]; if(!file) return;
+  readDocFile(file, dc=>{ window._ndFile=dc; const el=document.getElementById("nd-fname"); if(el) el.textContent="Attached: "+dc.name; });
+};
+window.docSearchSet=(v)=>{ window._docSearch=v; renderDocList(); };
 function composeMail(subj, body, prop, toAddr, label, templateId){
   const rpt=nextReport(prop);
   lastMail={to:toAddr||MAIL_TO,subj:subj+" ["+rpt+"]",body:"Report number: "+rpt+"\nReported by: "+((S.session&&S.session.name)||"\u2014")+"\n\n"+body,rpt:rpt,template:templateId||EJ_TEMPLATE,label:label||MAIL_LABEL,htmlBody:(()=>{ const _mh=window._mailHtml||""; window._mailHtml=""; return _mh ? '<div style="font-family:Arial,sans-serif;font-size:14px;color:#1a202c"><p><b>Report number:</b> '+rpt+'<br><b>Reported by:</b> '+esc(((S.session&&S.session.name)||"\u2014"))+'</p>'+_mh+'</div>' : ""; })()};
