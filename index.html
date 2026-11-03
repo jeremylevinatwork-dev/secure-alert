@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-build="fob-20261102-1218">
+<html lang="en" data-build="fob-20261103-0651">
 <head>
 <meta charset="UTF-8">
 <meta name="mobile-web-app-capable" content="yes">
@@ -714,6 +714,14 @@ function renderDash(){
     +(fobSessionName() === 'Jeremy Levin' ? '<div class="tile tap" onclick="showUsageLog()"><div class="n">\uD83D\uDD75</div><div class="l">Usage log \u2014 private</div></div>' : '')
     +"</div>"
 
+  if(canAudit()){
+    const na = nextAuditDate();
+    const today0 = new Date(); today0.setHours(0,0,0,0);
+    const days = Math.round((na - today0) / 86400000);
+    h += '<div class="card" style="border:2px solid #c9a227"><h3 style="margin-bottom:4px">\uD83D\uDCC5 Audit calendar</h3>'
+      + '<div style="font-size:15px">Yearly audit \u2014 <b>' + auditDateLabel(na) + '</b>' + (days === 0 ? ' <b style="color:#276749">(today)</b>' : ' <span class="note">(in ' + days + ' day' + (days === 1 ? '' : 's') + ')</span>') + '</div>'
+      + '<div class="note" style="margin-top:4px">The SECURITY TECHNOLOGY \u2014 YEARLY AUDIT runs every January 5. The automatic audit email also goes out that morning.</div></div>';
+  }
   const fuList = S.fobs.map(f=>({f:f, fi:followInfo(f)})).filter(x=>x.fi && !x.f.discardedAt);
   const fuDue = fuList.filter(x=>x.fi.overdue).sort((a,b)=>b.fi.days-a.fi.days);
   h += '<div class="card" style="' + (fuDue.length ? 'border:2px solid #B3261E' : '') + '"><h3 style="margin-bottom:2px">\u26A0 Needs attention</h3>'
@@ -888,6 +896,21 @@ window.clearBcnSel = ()=>{ bcnSel = {}; renderBeacons(); };
 function canSendFobs(){ return !!(S.session && S.session.name === 'Jeremy Levin'); }
 function isJeremy(){ return !!(S.session && S.session.name === 'Jeremy Levin'); }
 function canAudit(){ const nm = fobSessionName(); return nm === 'Jeremy Levin' || nm === 'Justin Messger' || nm === 'Justin Messenger'; }
+function nextAuditDate(){
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  let d = new Date(now.getFullYear(), 0, 5);
+  if(today > d) d = new Date(now.getFullYear() + 1, 0, 5);
+  return d;
+}
+function followingAuditDate(){
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  let d = new Date(now.getFullYear(), 0, 5);
+  if(today >= d) d = new Date(now.getFullYear() + 1, 0, 5);
+  return d;
+}
+function auditDateLabel(d){ return d.toLocaleDateString('en-US', {weekday:'long', month:'long', day:'numeric', year:'numeric'}); }
 function approvalsButton(){
   if(!canSendFobs()) return '';
   const n = (S.mailQueue||[]).filter(q=>q.status==='pending').length + (S.subQueue||[]).filter(q=>q.status==='pending').length + (S.actQueue||[]).filter(q=>q.status==='pending').length;
@@ -1892,7 +1915,7 @@ window.showAuditAll = async ()=>{
   const discAll = S.fobs.filter(f=>f.discardedAt);
   const discRows = PROPS.map(c=>{ const df = discAll.filter(f=>f.prop===c); const dB = df.filter(f=>!fobIsNewStock(f) && fobIsBroken(f)).length; return { c, dN: df.length, dB, dCost: dB * 181 }; }).filter(x=>x.dN);
   const discTotB = discRows.reduce((a, x)=>a + x.dB, 0), discTotCost = discRows.reduce((a, x)=>a + x.dCost, 0);
-  let body = auditCover('SECURITY TECHNOLOGY \u2014 YEARLY AUDIT ' + yr, 'Security Systems Technology \u00B7 All properties', 'Prepared by ' + esc(fobSessionName() || '\u2014') + ' \u00B7 ' + esc(now.toLocaleDateString()) + ' \u00B7 ' + esc(now.toLocaleTimeString()) + '<br>This audit covers everything the Security Systems Technology team tracks: every Code Green emergency fob and beacon, every camera in service at all ' + PROPS.length + ' properties plus Lakewood and Apopka, who last battery-tested each fob and beacon, the daily property inspection log, and every technician service visit logged for ' + yr + '.')
+  let body = auditCover('SECURITY TECHNOLOGY \u2014 YEARLY AUDIT ' + yr, 'Security Systems Technology \u00B7 All properties', 'Prepared by ' + esc(fobSessionName() || '\u2014') + ' \u00B7 ' + esc(now.toLocaleDateString()) + ' \u00B7 ' + esc(now.toLocaleTimeString()) + '<br>This audit covers everything the Security Systems Technology team tracks: every Code Green emergency fob and beacon, every camera in service at all ' + PROPS.length + ' properties plus Lakewood and Apopka, who last battery-tested each fob and beacon, the daily property inspection log, and every technician service visit logged for ' + yr + '.<br>Next yearly audit: ' + auditDateLabel(followingAuditDate()) + '.')
     + auditLegend()
     + '<div style="font-weight:800;color:#0F2440;margin:20px 0 0;font-size:16px;letter-spacing:.3px">AUDIT SUMMARY \u2014 ALL PROPERTIES</div>'
     + '<div style="font-size:12.5px;color:#666;margin:1px 0 2px">One row per property. The detail for each property follows below the summary. Fob cost counts broken fobs only, at $181 each \u2014 brand-new replacement stock is not charged.</div>'
