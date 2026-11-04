@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-build="fob-20261103-2140">
+<html lang="en" data-build="fob-20261103-2148">
 <head>
 <meta charset="UTF-8">
 <meta name="mobile-web-app-capable" content="yes">
@@ -175,7 +175,12 @@ header.branded{position:static;}
   body.report-open #report-view{display:block !important; position:static !important; overflow:visible !important; padding:0 !important;}
   body.report-open #report-view .report-bar{display:none !important;}
   body.report-open #report-view-body{color:#000; font-family:Arial,sans-serif;}
+  body.report-open #report-view-body td{padding:2px 4px !important; font-size:11px !important; line-height:1.25 !important;}
+  body.report-open #report-view-body th{padding:3px 4px !important; font-size:11px !important;}
+  body.report-open #report-view-body .signoff{page-break-inside:avoid;}
 }
+#report-view-body td{padding:3px 5px !important; font-size:12px !important; line-height:1.3 !important;}
+#report-view-body th{padding:4px 5px !important; font-size:12px !important;}
 </style>
 <style>
 html.embedded .logos{display:none;}
@@ -1773,7 +1778,7 @@ function auditBandFull(x){
 }
 function auditSignoff(){
   const line = 'border-bottom:1.5px solid #999;height:26px';
-  return '<div style="border:1.5px solid #0F2440;border-radius:6px;padding:14px 16px;margin-top:26px">'
+  return '<div class="signoff" style="border:1.5px solid #0F2440;border-radius:6px;padding:14px 16px;margin-top:26px">'
     + '<div style="font-weight:800;color:#0F2440;letter-spacing:.4px">AUDIT SIGN-OFF</div>'
     + '<table style="margin-top:8px"><tr><td style="border:0;padding:4px 8px 0 0;width:55%"><div style="' + line + '"></div><div style="font-size:12px;color:#666;margin-top:3px">Audit completed by (print name and sign)</div></td>'
     + '<td style="border:0;padding:4px 0 0 8px;width:45%"><div style="' + line + '"></div><div style="font-size:12px;color:#666;margin-top:3px">Date</div></td></tr>'
@@ -2474,7 +2479,11 @@ function standaloneReport(title, bodyHtml){
     +".foot{margin-top:20px;font-size:14px;color:#888}"
     +".rpt-bar{position:fixed;top:10px;right:10px;display:flex;gap:8px;z-index:99}"
     +".rpt-bar button{padding:10px 18px;border-radius:8px;border:2px solid #0F2440;font-size:15px;font-weight:bold;cursor:pointer}"
-    +"@media print{.rpt-bar{display:none !important}}";
+    +"@media print{.rpt-bar{display:none !important}}"
+    +"td{padding:2px 4px !important;font-size:11px !important;line-height:1.25 !important}"
+    +"th{padding:3px 4px !important;font-size:11px !important}"
+    +"table{margin-top:6px !important}"
+    +".signoff{page-break-inside:avoid}";
   return "<!DOCTYPE html><html><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">"
     +"<title>"+title+"</title><style>"+css+"</style></head><body>"
     +'<div class="rpt-bar"><button onclick="window.print()" style="background:#0F2440;color:#fff">🖨 Print</button><button onclick="window.close();setTimeout(function(){history.back();},200);" style="background:#fff;color:#0F2440">✕ Close</button></div>'
