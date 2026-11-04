@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-build="fob-20261103-0651">
+<html lang="en" data-build="fob-20261103-2140">
 <head>
 <meta charset="UTF-8">
 <meta name="mobile-web-app-capable" content="yes">
@@ -1710,7 +1710,6 @@ function auditLegend(){
     + row('Status', 'Where the fob is right now \u2014 In service, Broken, In repair, Returned, and so on. Anything after a + is an extra mark on the same fob.')
     + row('Last test / Tested by', 'The most recent battery test on record, and the person who ran it. This is the proof of testing for the audit. Tests logged before this was tracked may show no name.')
     + row('Inspection log', 'The daily property inspection entries the team recorded during the year.')
-    + row('Camera', 'Every security camera at the property, and whether it is Active or Offline.')
     + row('Technician visit', 'Each visit a vendor technician (SecurAlert, EMCI or Sciens) made to the property this year, and what they did.')
     + row('Discarded', 'Fobs out of service. They are kept on file for one year, counted at the end of this form, and are not part of the audit.')
     + row('Fob cost', 'Broken fobs are costed at $181 each in the AUDIT SUMMARY below \u2014 that is the all-property fob cost total. Brand-new replacement stock is never charged.')
@@ -1766,7 +1765,6 @@ function auditBandFull(x){
   const parts = [];
   if(x.pf.length) parts.push(x.pf.length + ' fobs');
   if(x.pb.length) parts.push(x.pb.length + ' beacons');
-  if(x.pc.length) parts.push(x.pc.length + ' cameras');
   if(x.pi.length) parts.push(x.pi.length + ' inspections');
   if(x.pv.length) parts.push(x.pv.length + ' visits');
   return '<div style="background:#0F2440;color:#fff;padding:10px 14px;margin:24px 0 0;border-radius:6px">'
@@ -1814,18 +1812,18 @@ function auditEmailHtml(perProp, meta){
   const tr100 = s => { s = String(s == null ? '' : s); return s.length > 100 ? s.slice(0, 100) + '\u2026' : (s || '\u2014'); };
   const build = inspFull => {
     let h = '<style>.ac{font-family:Arial,sans-serif;color:#1a202c;font-size:14px}.acv{background:#0F2440;color:#fff;padding:16px 18px;border-radius:6px}.acv .t{font-size:21px;font-weight:800}.acv .g{color:#C9A227;font-weight:700;margin-top:2px}.acv .m{color:#D7DEE8;font-size:12.5px;margin-top:7px;line-height:1.5}.alg{border:1.5px solid #0F2440;border-radius:6px;padding:10px 14px;margin-top:12px;font-size:13px;line-height:1.55}.abn{background:#0F2440;color:#fff;padding:9px 12px;border-radius:6px;margin-top:20px;font-weight:800}.abn span{color:#C9A227;font-weight:700}.abn i{float:right;font-style:normal;font-weight:400;font-size:12px;color:#D7DEE8}table.at{width:100%;border-collapse:collapse;margin-top:6px}table.at th{background:#0F2440;color:#fff;padding:7px;text-align:left;font-size:12.5px}table.at td{padding:6px 7px;border-bottom:1px solid #ddd;font-size:13px}.ah{font-weight:800;color:#0F2440;margin-top:12px}.as{font-size:12px;color:#666}.asg{border:1.5px solid #0F2440;border-radius:6px;padding:12px 14px;margin-top:22px;font-size:13px}</style>'
-      + '<div class="ac"><div class="acv"><div class="t">SECURITY TECHNOLOGY \u2014 YEARLY AUDIT ' + meta.yr + '</div><div class="g">Security Systems Technology \u00B7 All properties</div><div class="m">Prepared by ' + esc(meta.by) + ' \u00B7 ' + esc(meta.when) + '<br>Everything the Security Systems Technology team tracks for ' + meta.yr + ': every Code Green emergency fob and beacon, every camera at all ' + meta.propCount + ' properties plus Lakewood and Apopka, the daily property inspection log, and every technician service visit. The email edition carries the summary counts for cameras; the full camera list is in the printed audit.</div></div>'
-      + '<div class="alg"><b>HOW TO READ THIS AUDIT</b><br><b>Fob #</b> = the tag number on the device. <b>Fob ID</b> = its electronic ID (how SecurAlert knows it). <b>Status</b> = where it is now; anything after a + is an extra mark. <b>Last test / Tested by</b> = the most recent battery test on record and who ran it \u2014 the proof of testing. <b>Cameras</b> = every security camera at the property and its status. <b>Technician visits</b> = vendor visits logged this year, listed in full below. <b>Discarded</b> fobs are out of service, kept on file one year, and not audited. <b>Fob cost</b> = broken fobs at $181 each; brand-new replacement stock is never charged.</div>'
+      + '<div class="ac"><div class="acv"><div class="t">SECURITY TECHNOLOGY \u2014 YEARLY AUDIT ' + meta.yr + '</div><div class="g">Security Systems Technology \u00B7 All properties</div><div class="m">Prepared by ' + esc(meta.by) + ' \u00B7 ' + esc(meta.when) + '<br>Everything the Security Systems Technology team tracks for ' + meta.yr + ': every Code Green emergency fob and beacon, the daily property inspection log, and every technician service visit.</div></div>'
+      + '<div class="alg"><b>HOW TO READ THIS AUDIT</b><br><b>Fob #</b> = the tag number on the device. <b>Fob ID</b> = its electronic ID (how SecurAlert knows it). <b>Status</b> = where it is now; anything after a + is an extra mark. <b>Last test / Tested by</b> = the most recent battery test on record and who ran it \u2014 the proof of testing. <b>Technician visits</b> = vendor visits logged this year, listed in full below. <b>Discarded</b> fobs are out of service, kept on file one year, and not audited. <b>Fob cost</b> = broken fobs at $181 each; brand-new replacement stock is never charged.</div>'
       + '<div class="ah" style="font-size:15px;margin-top:18px">AUDIT SUMMARY \u2014 ALL PROPERTIES</div>'
-      + '<table class="at"><tr><th>Property</th><th style="text-align:center">Fobs</th><th style="text-align:center">Broken</th><th style="text-align:center">Fob cost</th><th style="text-align:center">Beacons</th><th style="text-align:center">Inspections</th><th style="text-align:center">Cameras</th><th style="text-align:center">Visits</th></tr>'
-      + perProp.map(x=>'<tr><td><b>' + esc(x.bandName || propName(x.c)) + '</b> (' + esc(x.c) + ')</td><td style="text-align:center">' + x.pf.length + '</td><td style="text-align:center">' + x.pcN + '</td><td style="text-align:center">$' + x.cost.toLocaleString('en-US') + '</td><td style="text-align:center">' + x.pb.length + '</td><td style="text-align:center">' + x.pi.length + '</td><td style="text-align:center">' + x.pc.length + '</td><td style="text-align:center">' + x.pv.length + '</td></tr>').join('')
-      + '<tr style="background:#EEF2F7;font-weight:800"><td>TOTAL</td><td style="text-align:center">' + meta.totF + '</td><td style="text-align:center">' + meta.totPcN + '</td><td style="text-align:center">$' + meta.totCost.toLocaleString('en-US') + '</td><td style="text-align:center">' + meta.totB + '</td><td style="text-align:center">' + meta.totI + '</td><td style="text-align:center">' + meta.totC + '</td><td style="text-align:center">' + meta.totV + '</td></tr></table>'
+      + '<table class="at"><tr><th>Property</th><th style="text-align:center">Fobs</th><th style="text-align:center">Broken</th><th style="text-align:center">Fob cost</th><th style="text-align:center">Beacons</th><th style="text-align:center">Inspections</th><th style="text-align:center">Visits</th></tr>'
+      + perProp.map(x=>'<tr><td><b>' + esc(x.bandName || propName(x.c)) + '</b> (' + esc(x.c) + ')</td><td style="text-align:center">' + x.pf.length + '</td><td style="text-align:center">' + x.pcN + '</td><td style="text-align:center">$' + x.cost.toLocaleString('en-US') + '</td><td style="text-align:center">' + x.pb.length + '</td><td style="text-align:center">' + x.pi.length + '</td><td style="text-align:center">' + x.pv.length + '</td></tr>').join('')
+      + '<tr style="background:#EEF2F7;font-weight:800"><td>TOTAL</td><td style="text-align:center">' + meta.totF + '</td><td style="text-align:center">' + meta.totPcN + '</td><td style="text-align:center">$' + meta.totCost.toLocaleString('en-US') + '</td><td style="text-align:center">' + meta.totB + '</td><td style="text-align:center">' + meta.totI + '</td><td style="text-align:center">' + meta.totV + '</td></tr></table>'
       + '<div class="ah" style="font-size:14px;margin-top:16px">DISCARDED FOBS \u2014 ON FILE (kept one year \u00B7 not part of the audit)</div>'
       + '<table class="at"><tr><th>Property</th><th style="text-align:center">Discarded</th><th style="text-align:center">Broken</th><th style="text-align:center">Cost</th></tr>'
       + (meta.discRows || []).map(x=>'<tr><td><b>' + esc(propName(x.c)) + '</b> (' + esc(x.c) + ')</td><td style="text-align:center">' + x.dN + '</td><td style="text-align:center">' + x.dB + '</td><td style="text-align:center">$' + x.dCost.toLocaleString('en-US') + '</td></tr>').join('')
       + '<tr style="background:#EEF2F7;font-weight:800"><td>TOTAL \u2014 discarded on file</td><td style="text-align:center">' + meta.discarded + '</td><td style="text-align:center">' + meta.discTotB + '</td><td style="text-align:center">$' + meta.discTotCost.toLocaleString('en-US') + '</td></tr></table>';
     perProp.forEach(x=>{
-      h += '<div class="abn">' + esc(x.bandName || propName(x.c)) + ' <span>(' + esc(x.c) + ')</span><i>' + x.pf.length + ' fobs \u00B7 ' + x.pb.length + ' beacons \u00B7 ' + x.pc.length + ' cameras \u00B7 ' + x.pi.length + ' inspections \u00B7 ' + x.pv.length + ' visits</i></div>';
+      h += '<div class="abn">' + esc(x.bandName || propName(x.c)) + ' <span>(' + esc(x.c) + ')</span><i>' + x.pf.length + ' fobs \u00B7 ' + x.pb.length + ' beacons \u00B7 ' + x.pi.length + ' inspections \u00B7 ' + x.pv.length + ' visits</i></div>';
       if(x.pf.length){
         h += '<div class="ah">A \u2014 Emergency fobs (' + x.pf.length + ')</div><table class="at"><tr><th>Fob #</th><th>Fob ID</th><th>Status</th><th>Dept</th><th>Assigned to</th><th>Last test</th><th>Tested by</th></tr>'
           + x.pf.map(f=>'<tr><td>' + esc(f.num || '\u2014') + '</td><td>' + esc(f.fobId) + '</td><td>' + esc(f.status) + ((f.also && f.also.length) ? ' + ' + esc(f.also.join(', ')) : '') + '</td><td>' + esc(f.dept || '\u2014') + '</td><td>' + esc(f.staff || '\u2014') + '</td><td>' + esc(f.battery || '\u2014') + '</td><td>' + esc(f.battBy || '\u2014') + '</td></tr>').join('') + '</table>';
@@ -1834,23 +1832,20 @@ function auditEmailHtml(perProp, meta){
         h += '<div class="ah">B \u2014 Beacons (' + x.pb.length + ')</div><table class="at"><tr><th>Beacon</th><th>Area</th><th>Status</th><th>Battery tested</th><th>Tested by</th></tr>'
           + x.pb.map(b=>'<tr><td>' + esc(b.beaconId) + '</td><td>' + esc(b.area || '\u2014') + '</td><td>' + esc(b.status || '\u2014') + '</td><td>' + esc(fmtD(b.battDate)) + '</td><td>' + esc(b.battBy || '\u2014') + '</td></tr>').join('') + '</table>';
       }
-      if(x.pc.length){
-        h += '<div class="ah">C \u2014 Cameras (' + x.pc.length + ')</div><div class="as">' + x.pc.length + ' cameras \u00B7 ' + x.camOff + ' offline \u00B7 ' + (x.pc.length - x.camOff) + ' active \u2014 the full camera list is in the printed audit and the Camera app.</div>';
-      }
       if(x.pi.length){
         if(inspFull){
-          h += '<div class="ah">D \u2014 Daily inspection log \u2014 ' + meta.yr + ' (' + x.pi.length + ')</div><table class="at"><tr><th>Date</th><th>Category</th><th>Inspector</th><th>Logged by</th><th>Notes</th></tr>'
+          h += '<div class="ah">C \u2014 Daily inspection log \u2014 ' + meta.yr + ' (' + x.pi.length + ')</div><table class="at"><tr><th>Date</th><th>Category</th><th>Inspector</th><th>Logged by</th><th>Notes</th></tr>'
             + x.pi.map(e=>'<tr><td>' + esc(e.date || '\u2014') + '</td><td>' + esc(e.category || '\u2014') + '</td><td>' + esc(e.inspector || '\u2014') + '</td><td>' + esc(e.by || '\u2014') + '</td><td>' + esc(tr100(e.notes)) + '</td></tr>').join('') + '</table>';
         } else {
-          h += '<div class="ah">D \u2014 Daily inspection log \u2014 ' + meta.yr + ' (' + x.pi.length + ')</div><div class="as">' + x.pi.length + ' entries logged at this property this year \u2014 the full log is in the printed audit and the Inspect app.</div>';
+          h += '<div class="ah">C \u2014 Daily inspection log \u2014 ' + meta.yr + ' (' + x.pi.length + ')</div><div class="as">' + x.pi.length + ' entries logged at this property this year \u2014 the full log is in the printed audit and the Inspect app.</div>';
         }
       }
       if(x.pv.length){
         if(inspFull){
-          h += '<div class="ah">E \u2014 Technician visits \u2014 ' + meta.yr + ' (' + x.pv.length + ')</div><table class="at"><tr><th>Date</th><th>Company</th><th>Technician</th><th>What they did</th><th>Items</th></tr>'
+          h += '<div class="ah">D \u2014 Technician visits \u2014 ' + meta.yr + ' (' + x.pv.length + ')</div><table class="at"><tr><th>Date</th><th>Company</th><th>Technician</th><th>What they did</th><th>Items</th></tr>'
             + x.pv.map(v=>'<tr><td>' + esc(String(v.when || '').slice(0, 10)) + '</td><td>' + esc(v.vendor || '\u2014') + '</td><td>' + esc(v.tech || '\u2014') + '</td><td>' + esc(tr100(v.did)) + '</td><td>' + esc(tr100(v.items)) + '</td></tr>').join('') + '</table>';
         } else {
-          h += '<div class="ah">E \u2014 Technician visits \u2014 ' + meta.yr + ' (' + x.pv.length + ')</div><div class="as">' + x.pv.length + ' technician visits logged at this property this year \u2014 the full list is in the printed audit.</div>';
+          h += '<div class="ah">D \u2014 Technician visits \u2014 ' + meta.yr + ' (' + x.pv.length + ')</div><div class="as">' + x.pv.length + ' technician visits logged at this property this year \u2014 the full list is in the printed audit.</div>';
         }
       }
     });
@@ -1908,20 +1903,20 @@ window.showAuditAll = async ()=>{
   const extraBands = [
     bandFor('LKW', 'Lakewood Regional Office', ['LKWD'], ['LKW'], ['LKW', 'LKWD']),
     bandFor('APK', 'Apopka Laundry', ['APK'], ['APK'], ['APK'])
-  ].filter(x=>x.pc.length || x.pi.length || x.pv.length);
+  ].filter(x=>x.pi.length || x.pv.length);
   const allBands = perProp.concat(extraBands);
   const totC = allBands.reduce((a, x)=>a + x.pc.length, 0), totCOff = allBands.reduce((a, x)=>a + x.camOff, 0), totV = allBands.reduce((a, x)=>a + x.pv.length, 0);
   const totF = perProp.reduce((a, x)=>a + x.pf.length, 0), totB = perProp.reduce((a, x)=>a + x.pb.length, 0), totI = perProp.reduce((a, x)=>a + x.pi.length, 0), totPcN = perProp.reduce((a, x)=>a + x.pcN, 0), totCost = perProp.reduce((a, x)=>a + x.cost, 0);
   const discAll = S.fobs.filter(f=>f.discardedAt);
   const discRows = PROPS.map(c=>{ const df = discAll.filter(f=>f.prop===c); const dB = df.filter(f=>!fobIsNewStock(f) && fobIsBroken(f)).length; return { c, dN: df.length, dB, dCost: dB * 181 }; }).filter(x=>x.dN);
   const discTotB = discRows.reduce((a, x)=>a + x.dB, 0), discTotCost = discRows.reduce((a, x)=>a + x.dCost, 0);
-  let body = auditCover('SECURITY TECHNOLOGY \u2014 YEARLY AUDIT ' + yr, 'Security Systems Technology \u00B7 All properties', 'Prepared by ' + esc(fobSessionName() || '\u2014') + ' \u00B7 ' + esc(now.toLocaleDateString()) + ' \u00B7 ' + esc(now.toLocaleTimeString()) + '<br>This audit covers everything the Security Systems Technology team tracks: every Code Green emergency fob and beacon, every camera in service at all ' + PROPS.length + ' properties plus Lakewood and Apopka, who last battery-tested each fob and beacon, the daily property inspection log, and every technician service visit logged for ' + yr + '.<br>Next yearly audit: ' + auditDateLabel(followingAuditDate()) + '.')
+  let body = auditCover('SECURITY TECHNOLOGY \u2014 YEARLY AUDIT ' + yr, 'Security Systems Technology \u00B7 All properties', 'Prepared by ' + esc(fobSessionName() || '\u2014') + ' \u00B7 ' + esc(now.toLocaleDateString()) + ' \u00B7 ' + esc(now.toLocaleTimeString()) + '<br>This audit covers everything the Security Systems Technology team tracks: every Code Green emergency fob and beacon, who last battery-tested each fob and beacon, the daily property inspection log, and every technician service visit logged for ' + yr + '.<br>Next yearly audit: ' + auditDateLabel(followingAuditDate()) + '.')
     + auditLegend()
     + '<div style="font-weight:800;color:#0F2440;margin:20px 0 0;font-size:16px;letter-spacing:.3px">AUDIT SUMMARY \u2014 ALL PROPERTIES</div>'
     + '<div style="font-size:12.5px;color:#666;margin:1px 0 2px">One row per property. The detail for each property follows below the summary. Fob cost counts broken fobs only, at $181 each \u2014 brand-new replacement stock is not charged.</div>'
-    + '<table style="width:100%;border-collapse:collapse"><tr><th style="background:#0F2440;color:#fff;padding:8px;text-align:left;font-size:13.5px">Property</th><th style="background:#0F2440;color:#fff;padding:8px;font-size:13.5px;text-align:center">Fobs in service</th><th style="background:#0F2440;color:#fff;padding:8px;font-size:13.5px;text-align:center">Beacons</th><th style="background:#0F2440;color:#fff;padding:8px;font-size:13.5px;text-align:center">Inspection entries (' + yr + ')</th><th style="background:#0F2440;color:#fff;padding:8px;font-size:13.5px;text-align:center">Broken fobs</th><th style="background:#0F2440;color:#fff;padding:8px;font-size:13.5px;text-align:center">Fob cost @ $181</th><th style="background:#0F2440;color:#fff;padding:8px;font-size:13.5px;text-align:center">Cameras</th><th style="background:#0F2440;color:#fff;padding:8px;font-size:13.5px;text-align:center">Technician visits</th></tr>'
-    + perProp.map(x=>'<tr><td style="padding:7px 8px;border-bottom:1px solid #ddd;font-size:14px"><b>' + esc(propName(x.c)) + '</b> (' + esc(x.c) + ')</td><td style="padding:7px 8px;border-bottom:1px solid #ddd;font-size:14px;text-align:center">' + x.pf.length + '</td><td style="padding:7px 8px;border-bottom:1px solid #ddd;font-size:14px;text-align:center">' + x.pb.length + '</td><td style="padding:7px 8px;border-bottom:1px solid #ddd;font-size:14px;text-align:center">' + x.pi.length + '</td><td style="padding:7px 8px;border-bottom:1px solid #ddd;font-size:14px;text-align:center">' + x.pcN + '</td><td style="padding:7px 8px;border-bottom:1px solid #ddd;font-size:14px;text-align:center">$' + x.cost.toLocaleString('en-US') + '</td><td style="padding:7px 8px;border-bottom:1px solid #ddd;font-size:14px;text-align:center">' + x.pc.length + (x.camOff ? ' (' + x.camOff + ' off)' : '') + '</td><td style="padding:7px 8px;border-bottom:1px solid #ddd;font-size:14px;text-align:center">' + x.pv.length + '</td></tr>').join('')
-    + '<tr style="background:#EEF2F7;font-weight:800"><td style="padding:7px 8px;border-bottom:1px solid #ddd;font-size:14px">TOTAL \u2014 all properties</td><td style="padding:7px 8px;border-bottom:1px solid #ddd;font-size:14px;text-align:center">' + totF + '</td><td style="padding:7px 8px;border-bottom:1px solid #ddd;font-size:14px;text-align:center">' + totB + '</td><td style="padding:7px 8px;border-bottom:1px solid #ddd;font-size:14px;text-align:center">' + totI + '</td><td style="padding:7px 8px;border-bottom:1px solid #ddd;font-size:14px;text-align:center">' + totPcN + '</td><td style="padding:7px 8px;border-bottom:1px solid #ddd;font-size:14px;text-align:center">$' + totCost.toLocaleString('en-US') + '</td><td style="padding:7px 8px;border-bottom:1px solid #ddd;font-size:14px;text-align:center">' + totC + ' (' + totCOff + ' off)</td><td style="padding:7px 8px;border-bottom:1px solid #ddd;font-size:14px;text-align:center">' + totV + '</td></tr></table>';
+    + '<table style="width:100%;border-collapse:collapse"><tr><th style="background:#0F2440;color:#fff;padding:8px;text-align:left;font-size:13.5px">Property</th><th style="background:#0F2440;color:#fff;padding:8px;font-size:13.5px;text-align:center">Fobs in service</th><th style="background:#0F2440;color:#fff;padding:8px;font-size:13.5px;text-align:center">Beacons</th><th style="background:#0F2440;color:#fff;padding:8px;font-size:13.5px;text-align:center">Inspection entries (' + yr + ')</th><th style="background:#0F2440;color:#fff;padding:8px;font-size:13.5px;text-align:center">Broken fobs</th><th style="background:#0F2440;color:#fff;padding:8px;font-size:13.5px;text-align:center">Fob cost @ $181</th><th style="background:#0F2440;color:#fff;padding:8px;font-size:13.5px;text-align:center">Technician visits</th></tr>'
+    + perProp.map(x=>'<tr><td style="padding:7px 8px;border-bottom:1px solid #ddd;font-size:14px"><b>' + esc(propName(x.c)) + '</b> (' + esc(x.c) + ')</td><td style="padding:7px 8px;border-bottom:1px solid #ddd;font-size:14px;text-align:center">' + x.pf.length + '</td><td style="padding:7px 8px;border-bottom:1px solid #ddd;font-size:14px;text-align:center">' + x.pb.length + '</td><td style="padding:7px 8px;border-bottom:1px solid #ddd;font-size:14px;text-align:center">' + x.pi.length + '</td><td style="padding:7px 8px;border-bottom:1px solid #ddd;font-size:14px;text-align:center">' + x.pcN + '</td><td style="padding:7px 8px;border-bottom:1px solid #ddd;font-size:14px;text-align:center">$' + x.cost.toLocaleString('en-US') + '</td><td style="padding:7px 8px;border-bottom:1px solid #ddd;font-size:14px;text-align:center">' + x.pv.length + '</td></tr>').join('')
+    + '<tr style="background:#EEF2F7;font-weight:800"><td style="padding:7px 8px;border-bottom:1px solid #ddd;font-size:14px">TOTAL \u2014 all properties</td><td style="padding:7px 8px;border-bottom:1px solid #ddd;font-size:14px;text-align:center">' + totF + '</td><td style="padding:7px 8px;border-bottom:1px solid #ddd;font-size:14px;text-align:center">' + totB + '</td><td style="padding:7px 8px;border-bottom:1px solid #ddd;font-size:14px;text-align:center">' + totI + '</td><td style="padding:7px 8px;border-bottom:1px solid #ddd;font-size:14px;text-align:center">' + totPcN + '</td><td style="padding:7px 8px;border-bottom:1px solid #ddd;font-size:14px;text-align:center">$' + totCost.toLocaleString('en-US') + '</td><td style="padding:7px 8px;border-bottom:1px solid #ddd;font-size:14px;text-align:center">' + totV + '</td></tr></table>';
   let text = 'SECURITY TECHNOLOGY \u2014 YEARLY AUDIT ' + yr + ' \u2014 ALL PROPERTIES\n' + head + '\n'
     + 'HOW TO READ: Fob # is the tag number on the device; Fob ID is its electronic ID; Last test / Tested by is the most recent battery test on record and who ran it (the proof of testing).\n'
     + 'SUMMARY: ' + totF + ' fobs in service \u00B7 ' + totB + ' beacons \u00B7 ' + totC + ' cameras (' + totCOff + ' offline) \u00B7 ' + totI + ' inspection entries \u00B7 ' + totV + ' technician visits.\n'
@@ -1929,7 +1924,7 @@ window.showAuditAll = async ()=>{
     + 'DISCARDED ON FILE: ' + discAll.length + ' fobs \u00B7 ' + discTotB + ' broken \u00D7 $181 = $' + discTotCost.toLocaleString('en-US') + ' (kept one year; not part of the audit).\n';
   perProp.forEach(x=>{
     body += auditBandFull(x);
-    text += '\n=== ' + propName(x.c) + ' (' + x.c + ') \u2014 ' + x.pf.length + ' fobs \u00B7 ' + x.pb.length + ' beacons \u00B7 ' + x.pc.length + ' cameras \u00B7 ' + x.pi.length + ' inspections \u00B7 ' + x.pv.length + ' visits ===\n';
+    text += '\n=== ' + propName(x.c) + ' (' + x.c + ') \u2014 ' + x.pf.length + ' fobs \u00B7 ' + x.pb.length + ' beacons \u00B7 ' + x.pi.length + ' inspections \u00B7 ' + x.pv.length + ' visits ===\n';
     if(x.pf.length){
       body += auditSection('A \u2014 Emergency fobs (' + x.pf.length + ')', 'Tick \u2713 as each fob is verified. "Tested by" is who last ran its battery test.') + auditFobTable(x.pf);
       text += 'FOBS (' + x.pf.length + ')\n' + x.pf.map(f=>'- #' + (f.num || '\u2014') + ' ' + f.fobId + ' \u00B7 ' + f.status + ' \u00B7 Last test ' + (f.battery || '\u2014') + ' by ' + (f.battBy || '\u2014')).join('\n') + '\n';
@@ -1938,32 +1933,24 @@ window.showAuditAll = async ()=>{
       body += auditSection('B \u2014 Beacons (' + x.pb.length + ')', 'Wall beacons that relay the fob signal.') + auditBeaconTable(x.pb);
       text += 'BEACONS (' + x.pb.length + ')\n' + x.pb.map(b=>'- ' + b.beaconId + ' \u00B7 ' + (b.area || '\u2014') + ' \u00B7 Battery tested ' + fmtD(b.battDate) + ' by ' + (b.battBy || '\u2014')).join('\n') + '\n';
     }
-    if(x.pc.length){
-      body += auditSection('C \u2014 Cameras (' + x.pc.length + ')', x.camOff + ' offline \u00B7 ' + (x.pc.length - x.camOff) + ' active. Tick \u2713 as each camera is verified.') + auditCameraTable(x.pc);
-      text += 'CAMERAS (' + x.pc.length + ' \u00B7 ' + x.camOff + ' offline)\n' + x.pc.map(cm=>'- ' + (cm.cameraId || '\u2014') + ' \u00B7 ' + (cm.location || '\u2014') + ' \u00B7 ' + (cm.model || '\u2014') + ' \u00B7 ' + (cm.status || '\u2014')).join('\n') + '\n';
-    }
     if(x.pi.length){
-      body += auditSection('D \u2014 Daily inspection log \u2014 ' + yr + ' (' + x.pi.length + ')', 'Entries the team logged at this property during the audit year.') + auditInspTable(x.pi);
+      body += auditSection('C \u2014 Daily inspection log \u2014 ' + yr + ' (' + x.pi.length + ')', 'Entries the team logged at this property during the audit year.') + auditInspTable(x.pi);
       text += 'INSPECTION LOG ' + yr + ' (' + x.pi.length + ')\n' + x.pi.map(e=>'- ' + (e.date || '\u2014') + ' \u00B7 ' + (e.category || '\u2014') + ' \u00B7 Inspector ' + (e.inspector || '\u2014') + ' \u00B7 Logged by ' + (e.by || '\u2014') + (e.notes ? ' \u00B7 ' + e.notes : '')).join('\n') + '\n';
     }
     if(x.pv.length){
-      body += auditSection('E \u2014 Technician visits \u2014 ' + yr + ' (' + x.pv.length + ')', 'Vendor technicians who came out to this property this year, and what they did.') + auditVisitTable(x.pv);
+      body += auditSection('D \u2014 Technician visits \u2014 ' + yr + ' (' + x.pv.length + ')', 'Vendor technicians who came out to this property this year, and what they did.') + auditVisitTable(x.pv);
       text += 'TECHNICIAN VISITS ' + yr + ' (' + x.pv.length + ')\n' + x.pv.map(v=>'- ' + String(v.when || '').slice(0, 10) + ' \u00B7 ' + (v.vendor || '\u2014') + ' \u00B7 ' + (v.tech || '\u2014') + ' \u00B7 ' + (v.did || '')).join('\n') + '\n';
     }
   });
   extraBands.forEach(x=>{
     body += auditBandFull(x);
-    text += '\n=== ' + (x.bandName || x.c) + ' (' + x.c + ') \u2014 ' + x.pc.length + ' cameras \u00B7 ' + x.pi.length + ' inspections \u00B7 ' + x.pv.length + ' visits ===\n';
-    if(x.pc.length){
-      body += auditSection('C \u2014 Cameras (' + x.pc.length + ')', x.camOff + ' offline \u00B7 ' + (x.pc.length - x.camOff) + ' active.') + auditCameraTable(x.pc);
-      text += 'CAMERAS (' + x.pc.length + ' \u00B7 ' + x.camOff + ' offline)\n' + x.pc.map(cm=>'- ' + (cm.cameraId || '\u2014') + ' \u00B7 ' + (cm.location || '\u2014') + ' \u00B7 ' + (cm.status || '\u2014')).join('\n') + '\n';
-    }
+    text += '\n=== ' + (x.bandName || x.c) + ' (' + x.c + ') \u2014 ' + x.pi.length + ' inspections \u00B7 ' + x.pv.length + ' visits ===\n';
     if(x.pi.length){
-      body += auditSection('D \u2014 Daily inspection log \u2014 ' + yr + ' (' + x.pi.length + ')', 'Entries the team logged here during the audit year.') + auditInspTable(x.pi);
+      body += auditSection('C \u2014 Daily inspection log \u2014 ' + yr + ' (' + x.pi.length + ')', 'Entries the team logged here during the audit year.') + auditInspTable(x.pi);
       text += 'INSPECTION LOG ' + yr + ' (' + x.pi.length + ')\n' + x.pi.map(e=>'- ' + (e.date || '\u2014') + ' \u00B7 ' + (e.category || '\u2014') + ' \u00B7 Inspector ' + (e.inspector || '\u2014')).join('\n') + '\n';
     }
     if(x.pv.length){
-      body += auditSection('E \u2014 Technician visits \u2014 ' + yr + ' (' + x.pv.length + ')', 'Vendor technicians who came out here this year, and what they did.') + auditVisitTable(x.pv);
+      body += auditSection('D \u2014 Technician visits \u2014 ' + yr + ' (' + x.pv.length + ')', 'Vendor technicians who came out here this year, and what they did.') + auditVisitTable(x.pv);
       text += 'TECHNICIAN VISITS ' + yr + ' (' + x.pv.length + ')\n' + x.pv.map(v=>'- ' + String(v.when || '').slice(0, 10) + ' \u00B7 ' + (v.vendor || '\u2014') + ' \u00B7 ' + (v.tech || '\u2014') + ' \u00B7 ' + (v.did || '')).join('\n') + '\n';
     }
   });
@@ -1975,7 +1962,7 @@ window.showAuditAll = async ()=>{
   text += '\nDiscarded fobs on file (kept one year): ' + S.fobs.filter(f=>f.discardedAt).length + ' (not audited).\n';
   window._auditHtml = body; window._auditText = text;
   window._auditEmailHtml = auditEmailHtml(allBands, { yr: yr, totF: totF, totB: totB, totI: totI, totPcN: totPcN, totCost: totCost, totC: totC, totV: totV, discRows: discRows, discTotB: discTotB, discTotCost: discTotCost, by: fobSessionName() || '\u2014', when: now.toLocaleDateString() + ' \u00B7 ' + now.toLocaleTimeString(), discarded: S.fobs.filter(f=>f.discardedAt).length, otherCount: other.length, propCount: PROPS.length });
-  openSheet('<h2>\uD83D\uDCCB Audit \u2014 all properties</h2><div class="sub">' + esc(head) + '<br>' + live.length + ' fobs in service \u00B7 ' + bcs.length + ' beacons \u00B7 ' + camsAll.length + ' cameras \u00B7 ' + insp.length + ' inspection log entries \u00B7 ' + visitsAll.length + ' technician visits (' + yr + ')</div>'
+  openSheet('<h2>\uD83D\uDCCB Audit \u2014 all properties</h2><div class="sub">' + esc(head) + '<br>' + live.length + ' fobs in service \u00B7 ' + bcs.length + ' beacons \u00B7 ' + insp.length + ' inspection log entries \u00B7 ' + visitsAll.length + ' technician visits (' + yr + ')</div>'
     + '<div class="note" style="margin-top:8px">The printed form is the official one: it opens with a summary of every property and a short guide that explains what every column means, then the detail for each property, and a sign-off block at the end.</div>'
     + '<div style="display:flex;gap:8px;margin:10px 0"><button class="btn btn-gold" style="flex:1;width:auto;margin:0" onclick="printReport(\'Secure Alert yearly audit \u2014 all properties\', window._auditHtml)">\uD83D\uDDA8 Print audit</button><button class="btn" style="flex:1;width:auto;margin:0;background:#0F2440" onclick="window._mailHtml=window._auditEmailHtml||window._auditHtml;composeMail(\'Secure Alert yearly audit \u2014 all properties \u2014 ' + yr + '\', window._auditText, \'ALL\')">\u2709\uFE0F Email audit</button></div>'
     + '<div class="note">Only you and Justin can see this audit button.</div>');
