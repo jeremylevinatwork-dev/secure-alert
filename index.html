@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-build="fob-20261105-1147">
+<html lang="en" data-build="fob-20261105-1624">
 <head>
 <meta charset="UTF-8">
 <meta name="mobile-web-app-capable" content="yes">
@@ -214,6 +214,32 @@ html.embedded .apptitle p{display:none;}
   .brandstrip.home img { max-height:38px; width:auto !important; max-width:78% !important; }
   .brandstrip.home img:first-child { height:30px !important; margin:0 auto 4px !important; }
   .toolbtn { padding-top:11px !important; padding-bottom:11px !important; }
+}
+</style>
+<style id="density-css">
+/* ===== density pass 2026-11-05: fit more on screen (screen only; print unchanged) ===== */
+@media screen {
+  main { padding:10px 10px 30px; }
+  .card { padding:10px 12px; margin-bottom:10px; }
+  .card h3 { font-size:16.5px; margin-bottom:6px; }
+  .row { gap:8px; }
+  .tile { min-width:96px; padding:8px 6px; border-radius:10px; }
+  .tile .n { font-size:23px; }
+  .tile .l { font-size:11px; margin-top:1px; }
+  h2.sec { font-size:17px; margin:12px 0 8px; }
+  .chip { padding:6px 11px; font-size:14px; }
+  .kv { padding:6px 0; }
+  .note { font-size:13.5px; line-height:1.45; }
+  .fob-id { font-size:18px; }
+  .fob-meta { font-size:14px; line-height:1.42; margin-top:4px; }
+  .foblegend { padding:6px 10px; margin-bottom:8px; font-size:12.5px; }
+  .hist div { padding:7px 0; }
+  .brandstrip.home { padding:6px 10px !important; margin-bottom:8px !important; }
+  .brandstrip.home img { max-height:30px; }
+  .brandstrip.home img:first-child { height:24px !important; margin:0 auto 3px !important; }
+}
+@media (min-width:900px){
+  .tile { min-width:104px; }
 }
 </style>
 </head>
