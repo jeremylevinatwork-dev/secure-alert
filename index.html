@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-build="fob-20261105-1026">
+<html lang="en" data-build="fob-20261105-1030">
 <head>
 <meta charset="UTF-8">
 <meta name="mobile-web-app-capable" content="yes">
@@ -1332,6 +1332,11 @@ window.fobDetail = u=>{
     +(wi ? '<div class="note">'+(wi.out ? 'Marked Not Under Warranty 1 Year \u2014 the warranty clock does not run on this fob.' : (wi.state==="expired" ? 'Warranty expired '+fmtD(wi.endStr)+'.' : 'Warranty ends '+fmtD(wi.endStr)+' \u2014 '+wi.days+' days left. The dashboard flags fobs 60 days out.'))+'</div>' : '<div class="note">No clock running yet \u2014 set the date this fob went into service and the 1-year warranty countdown starts.</div>')
     +'<label>Order number (1-year warranty)</label><input type="text" id="fd-order" value="'+esc(f.orderNo||"")+'" placeholder="Order # this fob came in on">'
     +'<button class="btn btn-ghost" onclick="setFobOrder(\''+f.uid+'\')">Save order number</button>'
+    +"<h2 class='sec'>Last test</h2>"
+    +'<label>Last test date</label><input type="date" id="fd-batt" value="'+esc(f.battery||"")+'">'
+    +'<button class="btn btn-gold" onclick="setLastTest(\''+f.uid+'\')">Save last test date</button>'
+    +'<button class="btn btn-ghost" onclick="battTest(\''+f.uid+'\')">Tested today</button>'
+    +(f.battBy ? '<div class="note">On record as tested by '+esc(f.battBy)+'.</div>' : '<div class="note">Wrong or missing test date? Fix it here \u2014 the audit reads this date.</div>')
     +"<h2 class='sec'>Ship back to SecurAlert</h2>"
     +'<label>FedEx tracking number</label><input type="text" id="fd-fedex" value="'+esc(f.shipTracking||"")+'" placeholder="FedEx tracking number">'
     +'<button class="btn btn-gold" onclick="saveFedex(\''+f.uid+'\')">Save tracking number</button>'
@@ -1500,6 +1505,15 @@ window.replaceFob = u=>{
     battery:"", notes:"Replaces "+f.fobId, replId:"", replProp:"", replDate:"", replacement:true,
     hist:[{t:nowLocal(), e:"Created as replacement for "+f.fobId+" (no charge)"}] });
   save(); window._fdPane='ship'; fobDetail(u); render(); toast("Replaced with "+nid);
+};
+window.setLastTest = u=>{
+  const f=S.fobs.find(x=>x.uid===u); if(!f) return;
+  const v=document.getElementById("fd-batt").value;
+  const by = fobSessionName() || "";
+  f.battery = v || "";
+  if(v && !f.battBy && by) f.battBy = by;
+  f.hist.push({t:nowLocal(), e: v ? ("Last test date set to "+fmtD(v)+(by ? " (edited by "+by+")" : "")) : "Last test date cleared"});
+  save(); window._fdPane='ship'; fobDetail(u); render(); toast(v ? "Last test date saved" : "Last test date cleared");
 };
 window.battTest = u=>{
   const f=S.fobs.find(x=>x.uid===u); if(!f) return;
