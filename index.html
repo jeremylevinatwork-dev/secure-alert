@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-build="fob-20261103-2206">
+<html lang="en" data-build="fob-20261105-1026">
 <head>
 <meta charset="UTF-8">
 <meta name="mobile-web-app-capable" content="yes">
@@ -66,8 +66,12 @@ section.tab.active{display:block;}
 .fob-meta{font-size:15px; color:var(--muted); margin-top:6px; line-height:1.5;}
 .fobpick{width:27px;height:27px;flex:0 0 auto;margin-top:3px;accent-color:#b7791f;cursor:pointer;}
 .card.fob.picked{outline:3px solid var(--gold);background:#fffaf0;}
-.sentmark{display:inline-flex;align-items:center;justify-content:center;width:23px;height:23px;border-radius:6px;background:#2b6cb0;color:#fff;font-weight:900;font-size:16.5px;flex:0 0 auto;}
-.sentline{color:#2b6cb0;font-weight:700;}
+.sentmark{display:inline-flex;align-items:center;justify-content:center;width:23px;height:23px;border-radius:6px;background:#DD6B20;color:#fff;font-weight:900;font-size:16.5px;flex:0 0 auto;}
+.sentline{color:#DD6B20;font-weight:700;}
+.fobdot{display:inline-block;width:12px;height:12px;border-radius:50%;margin-right:7px;vertical-align:-1px;border:1.5px solid rgba(0,0,0,.22)}
+.fd-yellow{background:#F5C518}.fd-blue{background:#2B6CB0}.fd-orange{background:#DD6B20}.fd-green{background:#38A169}.fd-red{background:#E53E3E}.fd-amber{background:#D69E2E}.fd-gray{background:#A0AEC0}
+.foblegend{background:#fff;border-radius:10px;padding:8px 12px;margin:0 0 10px;font-size:13px;font-weight:600;color:#2D3748;display:flex;flex-wrap:wrap;gap:6px 14px;align-items:center}
+.foblegend .fobdot{margin-right:5px}
 .selbar{position:sticky;top:0;z-index:6;background:#12284b;color:#fff;border-radius:12px;padding:10px 12px;margin:0 0 10px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:18px;}
 .badge{display:inline-block; font-size:13px; font-weight:700; padding:3px 9px; border-radius:999px;
   text-transform:uppercase; letter-spacing:.4px; white-space:nowrap;}
@@ -665,6 +669,19 @@ function fobIsBroken(f){
   return probs.indexOf("Broken") >= 0 || probs.indexOf("Charger Port Broken") >= 0 || probs.indexOf("Not Able to Charge") >= 0;
 }
 function fobIsDiscarded(f){ return !!(f && f.discardedAt); }
+function fobColorOf(f){
+  if(!f) return null;
+  if(f.discardedAt) return ["gray", "Discarded"];
+  if(f.shipTracking) return ["green", "Submitted \u2014 shipped to SecurAlert"];
+  if(fobOutCount(f)) return ["orange", "Submitted \u2014 waiting for reply"];
+  if(fobIsBroken(f)) return ["red", "Broken"];
+  if(fobIsNewStock(f)) return ["yellow", "Just added"];
+  if(f.status === "Assigned" || f.staff) return ["blue", "In the field"];
+  if(f.status === "Available" || f.status === "Fob Replaced") return null;
+  if(f.status === "In Repair" || f.status === "Warranty") return ["amber", "In repair"];
+  return ["gray", f.status || ""];
+}
+function fobDot(f){ var c = fobColorOf(f); return c ? '<span class="fobdot fd-' + c[0] + '" title="' + esc(c[1]) + '"></span>' : ''; }
 function fobFileUntil(f){
   if(!f || !f.discardedAt) return "";
   const d = new Date(f.discardedAt); if(isNaN(d)) return "";
@@ -711,7 +728,7 @@ function renderDash(){
     +'<div class="tile tap'+(transit?' warn':'')+'" onclick="goTab(\'subs\')"><div class="n">'+transit+'</div><div class="l">In transit</div></div>' + '<div class="tile tap" onclick="goTab(\'arrivals\')"><div class="n">' + (S.arrivals || []).filter(a=>Date.now() - (a.ts || 0) < 30 * 86400000).reduce((x, a)=>x + (a.qty || 0), 0) + '</div><div class="l">Fob arrivals (30d)</div></div>'
     +'<div class="tile tap'+(attn?' bad':'')+'" onclick="goFobs(\'\',\'ATTN\')"><div class="n">'+attn+'</div><div class="l">Need attention</div></div>'
     +'<div class="tile tap'+(n("Warranty")?' warn':'')+'" onclick="goFobs(\'Warranty\',\'\')"><div class="n">'+n("Warranty")+'</div><div class="l">Warranty</div></div>'
-    +'<div class="tile tap" onclick="goHotelSent(\'ALL\')"><div class="n" style="color:#2b6cb0">'+S.fobs.filter(f=>!f.discardedAt && fobOutCount(f)).length+'</div><div class="l"><span class="sentmark">\u2713</span> Submitted</div></div>'
+    +'<div class="tile tap" onclick="goHotelSent(\'ALL\')"><div class="n" style="color:#DD6B20">'+S.fobs.filter(f=>!f.discardedAt && fobOutCount(f)).length+'</div><div class="l"><span class="sentmark">\u2713</span> Submitted</div></div>'
     +'<div class="tile tap" onclick="goDiscarded()"><div class="n" style="color:#4a5568">'+S.fobs.filter(f=>f.discardedAt).length+'</div><div class="l">\uD83D\uDDD1 Trash \u2014 1 year only</div></div>'
     +'<div class="tile tap" onclick="showPrintedFobs()"><div class="n" style="color:#1A365D">'+(S.tagPrints||[]).reduce((a,t)=>a+(t.count||0),0)+'</div><div class="l">\uD83D\uDDA8 Printed fobs</div></div>'
     +'<div class="tile tap" onclick="showShippedFobs()"><div class="n" style="color:#276749">'+S.fobs.filter(f=>f.shipId || f.shipTracking).length+'</div><div class="l">\uD83D\uDE9A Shipped \u2014 FedEx</div></div>'
@@ -1124,6 +1141,7 @@ function renderFobs(){
   if(fobDiscarded) h += '<div style="margin:2px 0 10px"><button class="chip active" onclick="toggleDiscardedView()">Showing: discarded fobs \u2014 kept on file for one year \u2715</button></div>';
   if(fobDiscarded){ window._trashSel = window._trashSel || new Set(); const _printable = S.fobs.filter(f=>f.discardedAt && f.num); window._trashSel.forEach(u=>{ if(!_printable.some(f=>f.uid===u)) window._trashSel.delete(u); }); window._trashUids = list.filter(f=>f.num).map(f=>f.uid); const _tsN = window._trashSel.size; h += '<div style="display:flex;gap:8px;margin:0 0 10px;width:100%;align-items:center;flex-wrap:wrap"><button id="trashNumsBtn" class="btn btn-gold toolbtn" style="flex:1" onclick="printTrashNums()">' + (_tsN ? '\uD83D\uDDA8 Print selected fob numbers (' + _tsN + ')' : '\uD83D\uDDA8 Print fob numbers only') + '</button><button class="btn btn-ghost btn-sm" style="width:auto;margin:0" onclick="trashSelAll()">Select all</button><button class="btn btn-ghost btn-sm" style="width:auto;margin:0" onclick="trashSelNone()">Clear</button><span id="trashSelNote" class="note">' + (_tsN ? _tsN + ' selected' : '') + '</span></div>'; }
   if(fobDiscarded){ const _remake = list.filter(f=>f.num && !f.remadeAt); const _pendAll = S.fobs.filter(f=>f.discardedAt && f.num && !f.remadeAt); const _chips = ['ALL'].concat(PROPS.filter(c=>_pendAll.some(f=>f.prop===c))).map(c=>{ const n = c==='ALL' ? _pendAll.length : _pendAll.filter(f=>f.prop===c).length; return '<button class="chip' + (filter===c ? ' active' : '') + '" style="margin:0 6px 6px 0" onclick="setFilter(\'' + c + '\')">' + (c==='ALL' ? 'All properties' : esc(propName(c))) + ' (' + n + ')</button>'; }).join(''); window._remakeNums = _remake.map(f=>f.num); window._remakeUids = _remake.map(f=>f.uid); window._remakeSel = window._remakeSel || new Set(); window._remakeSel.forEach(u=>{ if(window._remakeUids.indexOf(u) < 0) window._remakeSel.delete(u); }); const _selN = window._remakeSel.size; if(_pendAll.length) h += '<div class="card" style="border:2px solid #c9a227"><h3 style="margin-bottom:4px">\uD83C\uDFF7 Tag numbers to remake \u2014 ' + _remake.length + '</h3><div class="note" style="margin-bottom:8px">These tag numbers came off trashed fobs. Print the list and every printed tag is checked off as Remade \u2014 or tap Remade on a single tag. Every printed set gets a tracking number for its property.</div><div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">' + _chips + '</div>' + '<div style="margin-bottom:10px;display:flex;gap:6px;align-items:center;flex-wrap:wrap"><button id="remakePrintBtn" class="btn btn-primary btn-sm" style="width:auto;margin:0" onclick="printRemakeList()">' + (_selN ? '\uD83D\uDDA8 Print selected (' + _selN + ')' : '\uD83D\uDDA8 Print tag numbers') + '</button><button class="btn btn-ghost btn-sm" style="width:auto;margin:0" onclick="remakeSelAll()">Select all</button><button class="btn btn-ghost btn-sm" style="width:auto;margin:0" onclick="remakeSelNone()">Clear</button><span id="remakeSelNote" class="note">' + (_selN ? _selN + ' selected' : '') + '</span></div>' + (_remake.length ? '' : '<div class="note" style="padding:8px 2px">No tags waiting for this property.</div>') + _remake.map(f=>'<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:7px 2px;border-bottom:1px solid #EDF0F4"><span><input type="checkbox" ' + (window._remakeSel.has(f.uid) ? 'checked ' : '') + 'onchange="toggleRemakeSel(\'' + f.uid + '\', this.checked)" style="transform:scale(1.35);margin-right:8px;vertical-align:middle"><span style="display:inline-block;background:#1a202c;color:#fff;font-weight:800;border-radius:6px;padding:2px 10px;font-size:16px">' + esc(f.num) + '</span> <b>' + esc(propName(f.prop)) + '</b> <span class="note">' + esc(f.fobId) + ' \u00B7 trashed ' + esc(fmtD(f.discardedAt)) + '</span></span><span style="display:flex;gap:6px"><button class="btn btn-ghost btn-sm" style="width:auto;margin:0" onclick="editTagNum(\'' + f.uid + '\')">✏️ Edit</button><button class="btn btn-gold btn-sm" style="width:auto;margin:0" onclick="markTagRemade(\'' + f.uid + '\')">\u2713 Remade</button></span></div>').join('') + '</div>'; }
+  if(!fobDiscarded) h += '<div class="foblegend"><span>Color code:</span><span><span class="fobdot fd-yellow"></span>Just added</span><span><span class="fobdot fd-blue"></span>In the field</span><span><span class="fobdot fd-orange"></span>Waiting for reply</span><span><span class="fobdot fd-green"></span>Shipped to SecurAlert</span><span><span class="fobdot fd-red"></span>Broken</span><span><span class="fobdot fd-amber"></span>In repair</span></div>';
   if(fobStatusSet) h += '<div style="margin:2px 0 10px"><button class="chip active" onclick="clearFobStatusSet()">Showing: Need attention \u2715</button></div>';
   if(fobSentProp) h += '<div style="margin:2px 0 10px"><button class="chip active" onclick="clearFobSentProp()">Showing: '+(fobSentProp==="ALL" ? "All hotels" : esc(fobSentProp))+' \u2014 submitted to SecurAlert \u2713 only \u2715</button></div>';
   if(fobNotSent) h += '<div style="margin:2px 0 10px"><button class="chip active" onclick="clearFobNotSent()">Showing: not yet submitted \u2715</button></div>';
@@ -1149,7 +1167,7 @@ function renderFobs(){
     const out = fobOutCount(f);
     return '<div class="card fob'+(fobSel[f.uid]?' picked':'')+'" onclick="fobDetail(\''+f.uid+'\')">'
       +'<div style="display:flex;gap:10px;align-items:flex-start">'+((canSendFobs() || out || fobDiscarded) ? '<div style="display:flex;flex-direction:column;align-items:center;gap:8px;padding-top:2px;flex:0 0 auto">'+((canSendFobs() && !fobDiscarded) ? '<input type="checkbox" class="fobpick" aria-label="Select fob" '+(fobSel[f.uid]?'checked':'')+' onclick="toggleFobPick(\''+f.uid+'\',event)">' : '')+(fobDiscarded ? '<input type="checkbox" class="trashpick" aria-label="Select fob" '+((window._trashSel && window._trashSel.has(f.uid))?'checked':'')+' onclick="toggleTrashPick(\''+f.uid+'\',event)">' : '')+(out ? '<span class="sentmark" title="Sent to SecurAlert \u2014 waiting for response">\u2713</span>' : '')+'</div>' : '')+'<div style="flex:1;min-width:0">'
-      +'<div class="fob-top"><span class="fob-id">'+overdueDot(f)+esc(f.fobId)+"</span>"+(f.num?'<span class="note" style="font-weight:700">#'+esc(f.num)+"</span>":"")+statusBadge(f.status)+alsoBadges(f)+(f.files && f.files.length ? '<span class="badge" style="background:#EBF4FF;color:#1A365D">\uD83D\uDCCE ' + f.files.length + '</span>' : "") + (fobNeedsPickup(f) ? '<span class="badge" style="background:#FEFCBF;color:#744210">\uD83D\uDE90 Needs pickup</span>' : (f.pickedUp ? '<span class="badge" style="background:#E9F7EF;color:#276749">\u2713 Picked up</span>' : ''))+"</div>"
+      +'<div class="fob-top"><span class="fob-id">'+fobDot(f)+overdueDot(f)+esc(f.fobId)+"</span>"+(f.num?'<span class="note" style="font-weight:700">#'+esc(f.num)+"</span>":"")+statusBadge(f.status)+alsoBadges(f)+(f.files && f.files.length ? '<span class="badge" style="background:#EBF4FF;color:#1A365D">\uD83D\uDCCE ' + f.files.length + '</span>' : "") + (fobNeedsPickup(f) ? '<span class="badge" style="background:#FEFCBF;color:#744210">\uD83D\uDE90 Needs pickup</span>' : (f.pickedUp ? '<span class="badge" style="background:#E9F7EF;color:#276749">\u2713 Picked up</span>' : ''))+"</div>"
       +'<div class="fob-meta"><span class="pchip">'+esc(propName(f.prop))+"</span>"
       +(f.dept?" <b>"+esc(f.dept)+"</b>":"")
       +(f.staff? (f.dept?" \u00B7 ":" ")+"Assigned to <b>"+esc(f.staff)+"</b>"+(f.shift?" ("+esc(f.shift)+")":""):"")
@@ -1264,7 +1282,7 @@ window.fobDetail = u=>{
   const wi = warrantyInfo(f);
   const tcN = f.sentRpt ? ((((S.tickets || []).find(x=>x.rpt===f.sentRpt) || {}).comments) || []).length : 0;
   const startPane = window._fdPane || 'details'; window._fdPane = null;
-  let h='<h2>'+esc(f.fobId)+'</h2><div class="sub"><span class="pchip">'+esc(propName(f.prop))+"</span> "+statusBadge(f.status)+alsoBadges(f)+(f.sentToVendor?'<span class="sentmark" title="Sent to SecurAlert — waiting for response">\u2713</span>':"")+"</div>"
+  let h='<h2>'+fobDot(f)+esc(f.fobId)+'</h2><div class="sub"><span class="pchip">'+esc(propName(f.prop))+"</span> "+statusBadge(f.status)+alsoBadges(f)+(f.sentToVendor?'<span class="sentmark" title="Sent to SecurAlert — waiting for response">\u2713</span>':"")+"</div>"
     +(f.replacement?'<div class="kv"><span>Billing</span><b>Replacement \u2014 no charge</b></div>':"")
     +'<div class="kv"><span>Fob number</span><b>'+esc(f.num||"—")+"</b></div>"
     +'<div class="kv"><span>Assigned to</span><b>'+esc(f.staff||"—")+"</b></div>"
