@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-build="fob-20261105-1118">
+<html lang="en" data-build="fob-20261105-1147">
 <head>
 <meta charset="UTF-8">
 <meta name="mobile-web-app-capable" content="yes">
@@ -1259,6 +1259,7 @@ function commitAddFob(){
     replacement:isRepl,
     hist:[{t:nowLocal(), e:"Registered ("+prop+")"+(isRepl?" (replacement, no charge)":"")}] });
   const nfob=S.fobs.find(x=>x.uid===nu); if(nfob) readAlso("nf", nfob, nfob.status);
+  if(nfob && nfob.status === "Assigned" && !nfob.inService && !fobIsBroken(nfob)){ nfob.inService = todayISO(); }
   if(nfob && fobIsBroken(nfob)){
     /* Broken return from a property: it came back because something is wrong
        with it — it is NOT a new deployment, so it never gets a warranty clock. */
@@ -1419,6 +1420,12 @@ window.setOutOfService = u=>{
   f.hist.push({t:nowLocal(), e: was ? ("Taken out of service (was in service " + fmtD(was) + ") \u2014 warranty clock stopped") : "Taken out of service \u2014 no warranty clock was running"});
   save(); window._fdPane='ship'; fobDetail(u); render(); toast(was ? "Out of service \u2014 warranty clock stopped" : "Out of service");
 };
+function autoInService(f, wasBroken){
+  if(!f || f.status !== "Assigned" || f.inService || f.discardedAt || wasBroken || fobIsBroken(f)) return;
+  f.inService = todayISO();
+  const wi = warrantyInfo(f);
+  f.hist.push({t:nowLocal(), e:"Put in service " + fmtD(f.inService) + " \u2014 warranty ends " + (wi ? (wi.out ? "(not under warranty)" : fmtD(wi.endStr)) : "") + " (auto \u2014 on assignment)"});
+}
 window.setInService = u=>{
   const f=S.fobs.find(x=>x.uid===u); if(!f) return;
   const v=document.getElementById("fd-service").value;
@@ -1444,6 +1451,7 @@ window.setFobOrder = u=>{
 };
 window.assignFob = u=>{
   const f=S.fobs.find(x=>x.uid===u); if(!f) return;
+  const wasBroken = fobIsBroken(f);
   f.num=document.getElementById("fd-num").value.trim();
   f.staff=document.getElementById("fd-staff").value.trim();
   f.shift=document.getElementById("fd-shift").value.trim();
@@ -1454,6 +1462,7 @@ window.assignFob = u=>{
   const nd=document.getElementById("fd-dept").value;
   if(nd && nd!==f.dept){ f.dept=nd; f.hist.push({t:nowLocal(), e:"Department \u2192 "+nd}); }
   f.hist.push({t:nowLocal(), e:(s==="Assigned" ? "Assigned to "+(f.staff||"staff") : "Staff name set: "+(f.staff||"staff")+" (status stays "+s+")")});
+  autoInService(f, wasBroken);
   readFedex(f); readAlso("fd", f, s);
   save(); fobDetail(u); render(); toast("Saved \u2014 "+(f.staff||"staff")+" \u00b7 "+s);
 };
@@ -1490,6 +1499,7 @@ window.checkinFob = u=>{
 };
 window.setFobStatus = u=>{
   const f=S.fobs.find(x=>x.uid===u); if(!f) return;
+  const wasBroken = fobIsBroken(f);
   const s=document.getElementById("fd-status").value;
   const nmEl=document.getElementById("fd-num"); if(nmEl) f.num=nmEl.value.trim();
   if(s==="Assigned"){
@@ -1500,7 +1510,7 @@ window.setFobStatus = u=>{
   readFedex(f); readAlso("fd", f, s);
   const nd=document.getElementById("fd-dept").value;
   if(nd && nd!==f.dept){ f.dept=nd; f.hist.push({t:nowLocal(), e:"Department \u2192 "+nd}); }
-  f.hist.push({t:nowLocal(), e:"Status \u2192 "+s}); save(); fobDetail(u); render(); toast("Status updated");
+  f.hist.push({t:nowLocal(), e:"Status \u2192 "+s}); autoInService(f, wasBroken); save(); fobDetail(u); render(); toast("Status updated");
 };
 window.replaceFob = u=>{
   const f=S.fobs.find(x=>x.uid===u); if(!f) return;
