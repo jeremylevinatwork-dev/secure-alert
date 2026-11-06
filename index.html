@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-build="fob-20261105-1624">
+<html lang="en" data-build="fob-20261106-1352">
 <head>
 <meta charset="UTF-8">
 <meta name="mobile-web-app-capable" content="yes">
@@ -240,6 +240,23 @@ html.embedded .apptitle p{display:none;}
 }
 @media (min-width:900px){
   .tile { min-width:104px; }
+}
+</style>
+<style id="polish-css">
+/* ===== refresh pass 2026-11-06: organized + professional (screen only; print unchanged) ===== */
+@media screen {
+  .tgroup { margin-bottom:12px; }
+  .tg-label { font-size:12px; font-weight:800; letter-spacing:1.1px; text-transform:uppercase; color:var(--navy); border-left:4px solid #d4af37; padding-left:8px; margin:12px 2px 7px; }
+  h2.sec { border-bottom:3px solid #d4af37; padding-bottom:4px; }
+  .card { border-radius:14px; box-shadow:0 2px 8px rgba(16,42,71,.08); }
+  .card h3 { color:var(--navy); letter-spacing:.2px; }
+  .tile { min-height:64px; display:flex; flex-direction:column; align-items:center; justify-content:center; box-shadow:0 1px 3px rgba(16,42,71,.07); }
+  input, select, textarea { border-radius:10px; }
+  input:focus, select:focus, textarea:focus { border-color:#b7791f; outline:none; box-shadow:0 0 0 3px rgba(212,175,55,.28); }
+  .card.fob:hover { box-shadow:0 3px 10px rgba(16,42,71,.13); }
+}
+@media (hover:hover) {
+  .tile.tap:hover { box-shadow:0 4px 12px rgba(16,42,71,.15); }
 }
 </style>
 </head>
@@ -755,20 +772,22 @@ function renderDash(){
   const attn = n("In Repair")+n("Broken")+n("Warranty")+n("Lost");
   let h = '<div class="brandstrip home" style="background:#fff;border-radius:12px;padding:10px 12px;margin-bottom:10px"><img src="loews-logo-trim.jpg" alt="Loews Hotels" style="height:68px;width:auto;display:block;margin:2px auto 8px"><img src="securalert-logo.jpg" alt="SECURalert" style="width:100%;max-width:520px;display:block;margin:0 auto"></div>'
     + approvalsButton() + mailApprovalCard() + subApprovalCard() + actApprovalCard()
-    + '<h2 class="sec" style="margin-top:2px">Today at a glance</h2><div class="row">'
+    + '<h2 class="sec" style="margin-top:2px">Today at a glance</h2><div class="tgroup"><div class="tg-label">Fleet status</div><div class="row">'
     +'<div class="tile tap" onclick="goFobsNotSent()"><div class="n">'+fobs.filter(f=>!fobOutCount(f)).length+'</div><div class="l">Fobs</div></div>'
     +'<div class="tile tap" onclick="goFobs(\'Assigned\',\'\')"><div class="n">'+n("Assigned")+'</div><div class="l">Assigned</div></div>'
     +'<div class="tile tap" onclick="goFobs(\'\',\'INSVC\')"><div class="n svcflash">'+fobs.filter(f=>!!f.inService).length+'</div><div class="l"><span class="fobdot fd-greenf"></span>In service</div></div>'
     +'<div class="tile tap'+(transit?' warn':'')+'" onclick="goTab(\'subs\')"><div class="n">'+transit+'</div><div class="l">In transit</div></div>' + '<div class="tile tap" onclick="goTab(\'arrivals\')"><div class="n">' + (S.arrivals || []).filter(a=>Date.now() - (a.ts || 0) < 30 * 86400000).reduce((x, a)=>x + (a.qty || 0), 0) + '</div><div class="l">Fob arrivals (30d)</div></div>'
+    +'</div></div><div class="tgroup"><div class="tg-label">Needs action</div><div class="row">'
     +'<div class="tile tap'+(attn?' bad':'')+'" onclick="goFobs(\'\',\'ATTN\')"><div class="n">'+attn+'</div><div class="l">Need attention</div></div>'
     +'<div class="tile tap'+(n("Warranty")?' warn':'')+'" onclick="goFobs(\'Warranty\',\'\')"><div class="n">'+n("Warranty")+'</div><div class="l">Warranty</div></div>'
     +'<div class="tile tap" onclick="goHotelSent(\'ALL\')"><div class="n" style="color:#DD6B20">'+S.fobs.filter(f=>!f.discardedAt && fobOutCount(f)).length+'</div><div class="l"><span class="sentmark">\u2713</span> Submitted</div></div>'
-    +'<div class="tile tap" onclick="goDiscarded()"><div class="n" style="color:#4a5568">'+S.fobs.filter(f=>f.discardedAt).length+'</div><div class="l">\uD83D\uDDD1 Trash \u2014 1 year only</div></div>'
-    +'<div class="tile tap" onclick="showPrintedFobs()"><div class="n" style="color:#1A365D">'+(S.tagPrints||[]).reduce((a,t)=>a+(t.count||0),0)+'</div><div class="l">\uD83D\uDDA8 Printed fobs</div></div>'
+    +'</div></div><div class="tgroup"><div class="tg-label">Records</div><div class="row">'
     +'<div class="tile tap" onclick="showShippedFobs()"><div class="n" style="color:#276749">'+S.fobs.filter(f=>f.shipId || f.shipTracking).length+'</div><div class="l">\uD83D\uDE9A Shipped \u2014 FedEx</div></div>'
+    +'<div class="tile tap" onclick="showPrintedFobs()"><div class="n" style="color:#1A365D">'+(S.tagPrints||[]).reduce((a,t)=>a+(t.count||0),0)+'</div><div class="l">\uD83D\uDDA8 Printed fobs</div></div>'
+    +'<div class="tile tap" onclick="goDiscarded()"><div class="n" style="color:#4a5568">'+S.fobs.filter(f=>f.discardedAt).length+'</div><div class="l">\uD83D\uDDD1 Trash \u2014 1 year only</div></div>'
     +(canAudit() ? '<div class="tile tap" onclick="showAuditAll()"><div class="n">\uD83D\uDCCB</div><div class="l">Audit \u2014 all properties</div></div>' : '')
     +(fobSessionName() === 'Jeremy Levin' ? '<div class="tile tap" onclick="showUsageLog()"><div class="n">\uD83D\uDD75</div><div class="l">Usage log \u2014 private</div></div>' : '')
-    +"</div>"
+    +"</div></div>"
 
   if(canAudit()){
     const na = nextAuditDate();
