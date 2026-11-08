@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-build="fob-20261106-1352">
+<html lang="en" data-build="fob-20261108-1030">
 <head>
 <meta charset="UTF-8">
 <meta name="mobile-web-app-capable" content="yes">
@@ -471,6 +471,61 @@ function sbBadge(online, syncing){
   el.textContent = syncing ? '⟳ Syncing…' : (online ? '● Live sync' : '○ Offline');
   el.style.color = syncing ? '#fbbf24' : (online ? '#4ade80' : '#f87171');
 }
+
+// --- Photo/file externalization (egress shrink, 2026-11-08): file bytes live in
+// their own app_records rows (id photo-...); state keeps 'photoref:photo-...' pointers.
+const PHOTO_CACHE = {};
+function isPhotoRef(v){ return typeof v==='string' && v.indexOf('photoref:')===0; }
+function fileImgAttr(f){ return isPhotoRef(f.data) ? ('data-photoref="'+f.data+'" src=""') : ('src="'+f.data+'"'); }
+function fileLinkAttr(f){ return isPhotoRef(f.data) ? ('data-photoref="'+f.data+'" href="#"') : ('href="'+f.data+'"'); }
+async function photoPut(dataUrl){
+  try{
+    const pid = 'photo-' + Date.now().toString(36) + Math.random().toString(36).slice(2,10);
+    const r = await fetch(SB_URL + '/rest/v1/app_records', {method:'POST', headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':'application/json','Prefer':'resolution=merge-duplicates'}, body: JSON.stringify({id:pid, app:SB_APP, data:{blob:dataUrl}})});
+    if(!r.ok) return null;
+    return 'photoref:' + pid;
+  }catch(e){ return null; }
+}
+async function photoGet(ref){
+  const pid = String(ref).slice(9);
+  if(PHOTO_CACHE[pid]) return PHOTO_CACHE[pid];
+  try{
+    const r = await fetch(SB_URL + '/rest/v1/app_records?id=eq.' + encodeURIComponent(pid) + '&select=data', {headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY}});
+    if(!r.ok) return null;
+    const rows = await r.json();
+    const blob = rows && rows[0] && rows[0].data && rows[0].data.blob;
+    if(blob) PHOTO_CACHE[pid] = blob;
+    return blob || null;
+  }catch(e){ return null; }
+}
+function hydratePhotos(){
+  try{
+    document.querySelectorAll('img[data-photoref],a[data-photoref]').forEach(function(el){
+      if(el.getAttribute('data-hydrated')) return;
+      el.setAttribute('data-hydrated','1');
+      photoGet(el.getAttribute('data-photoref')).then(function(u){ if(u){ if(el.tagName==='IMG') el.src=u; else el.href=u; } });
+    });
+  }catch(e){}
+}
+try{ new MutationObserver(function(){ hydratePhotos(); }).observe(document.documentElement, {childList:true, subtree:true}); }catch(e){}
+async function externalizeDeep(root){
+  const seen = new Set();
+  async function walk(o){
+    if(!o || typeof o !== 'object' || seen.has(o)) return;
+    seen.add(o);
+    if(!Array.isArray(o) && typeof o.data === 'string' && o.data.indexOf('data:') === 0){
+      const ref = await photoPut(o.data);
+      if(ref) o.data = ref;
+    }
+    for(const k of Object.keys(o)){ await walk(o[k]); }
+  }
+  await walk(root);
+}
+window.fobOpenDataUrl = async (u, name)=>{
+  let url = u;
+  if(isPhotoRef(url)){ url = await photoGet(url); if(!url){ toast('Could not load that file'); return; } }
+  const a = document.createElement('a'); a.href = url; a.download = name || 'file'; a.target = '_blank'; document.body.appendChild(a); a.click(); a.remove();
+};
 async function sbPush(){
   sbBadge(true, true);
   if(!S._ts){ S._ts = Date.now(); try{ localStorage.setItem(LS_KEY, JSON.stringify(S)); }catch(e){} }
@@ -498,6 +553,7 @@ async function sbPush(){
       }
     }
   }catch(e){}
+  try{ await externalizeDeep(S); }catch(e){}
   try{
     var payload = JSON.parse(JSON.stringify(S));
     if('session' in payload) payload.session = null;
@@ -1627,8 +1683,8 @@ window.viewFobFile = (u, i)=>{
   const isImg = (dc.type || "").indexOf("image/") === 0;
   openSheet('<h2 style="font-size:16px">' + (isImg ? '\uD83D\uDDBC ' : '\uD83D\uDCC4 ') + esc(dc.name || "File") + '</h2>'
     + '<div class="sub">' + esc(f.fobId) + ' \u00B7 ' + esc(propName(f.prop)) + '</div>'
-    + (isImg ? '<img src="' + dc.data + '" alt="" style="width:100%;border-radius:10px;display:block">' : '<div style="font-size:44px;text-align:center;padding:16px 0">\uD83D\uDCC4</div>')
-    + '<a class="btn btn-gold" style="display:block;text-align:center;margin-top:12px" href="' + dc.data + '" download="' + esc(dc.name || "file") + '">Open / download</a>'
+    + (isImg ? '<img ' + fileImgAttr(dc) + ' alt="" style="width:100%;border-radius:10px;display:block">' : '<div style="font-size:44px;text-align:center;padding:16px 0">\uD83D\uDCC4</div>')
+    + '<a class="btn btn-gold" style="display:block;text-align:center;margin-top:12px" ' + fileLinkAttr(dc) + ' download="' + esc(dc.name || "file") + '">Open / download</a>'
     + '<button class="btn btn-danger" onclick="delFobFile(\'' + u + '\',' + i + ')">Remove file</button>'
     + '<button class="btn btn-ghost" onclick="fobDetail(\'' + u + '\')">\u2190 Back to fob</button>');
 };
@@ -1719,8 +1775,8 @@ window.viewTicketFile = (rpt, i)=>{
   const isImg = (dc.type || "").indexOf("image/") === 0;
   openSheet('<h2 style="font-size:16px">' + (isImg ? '\uD83D\uDDBC ' : '\uD83D\uDCC4 ') + esc(dc.name || "File") + '</h2>'
     + '<div class="sub">Ticket ' + esc(rpt) + '</div>'
-    + (isImg ? '<img src="' + dc.data + '" alt="" style="width:100%;border-radius:10px;display:block">' : '<div style="font-size:44px;text-align:center;padding:16px 0">\uD83D\uDCC4</div>')
-    + '<a class="btn btn-gold" style="display:block;text-align:center;margin-top:12px" href="' + dc.data + '" download="' + esc(dc.name || "file") + '">Open / download</a>'
+    + (isImg ? '<img ' + fileImgAttr(dc) + ' alt="" style="width:100%;border-radius:10px;display:block">' : '<div style="font-size:44px;text-align:center;padding:16px 0">\uD83D\uDCC4</div>')
+    + '<a class="btn btn-gold" style="display:block;text-align:center;margin-top:12px" ' + fileLinkAttr(dc) + ' download="' + esc(dc.name || "file") + '">Open / download</a>'
     + '<button class="btn btn-danger" onclick="delTicketFile(\'' + rpt + '\',' + i + ')">Remove file</button>'
     + '<button class="btn btn-ghost" onclick="openTicket(\'' + rpt + '\')">\u2190 Back to ticket</button>');
 };
@@ -2206,8 +2262,8 @@ window.shipViewFile = (kind, u, i)=>{
   const dc = target.files[i];
   const isImg = (dc.type || "").indexOf("image/") === 0;
   openSheet('<h2 style="font-size:16px">' + (isImg ? '\uD83D\uDDBC ' : '\uD83D\uDCC4 ') + esc(dc.name || "File") + '</h2>'
-    + (isImg ? '<img src="' + dc.data + '" alt="" style="width:100%;border-radius:10px;display:block">' : '<div style="font-size:44px;text-align:center;padding:16px 0">\uD83D\uDCC4</div>')
-    + '<a class="btn btn-gold" style="display:block;text-align:center;margin-top:12px" href="' + dc.data + '" download="' + esc(dc.name || "file") + '">Open / download</a>'
+    + (isImg ? '<img ' + fileImgAttr(dc) + ' alt="" style="width:100%;border-radius:10px;display:block">' : '<div style="font-size:44px;text-align:center;padding:16px 0">\uD83D\uDCC4</div>')
+    + '<a class="btn btn-gold" style="display:block;text-align:center;margin-top:12px" ' + fileLinkAttr(dc) + ' download="' + esc(dc.name || "file") + '">Open / download</a>'
     + '<button class="btn btn-danger" onclick="shipDelFile(\'' + kind + '\',\'' + u + '\',' + i + ')">Remove file</button>'
     + '<button class="btn btn-ghost" onclick="showShippedFobs()">\u2190 Back to shipments</button>');
 };
@@ -3067,8 +3123,8 @@ window.viewDocFile=(u,i)=>{
   const isImg=(dc.type||"").indexOf("image/")===0;
   openSheet('<h2 style="font-size:16px">'+(isImg?'\uD83D\uDDBC ':'\uD83D\uDCC4 ')+esc(dc.name||"File")+'</h2>'
     +'<div class="sub">'+esc(d.docNo||"")+' \u00B7 '+esc(propName(d.prop))+'</div>'
-    +(isImg?'<img src="'+dc.data+'" alt="" style="width:100%;border-radius:10px;display:block">':'<div style="font-size:44px;text-align:center;padding:16px 0">\uD83D\uDCC4</div>')
-    +'<a class="btn btn-gold" style="display:block;text-align:center;margin-top:12px" href="'+dc.data+'" download="'+esc(dc.name||"file")+'">Open / download</a>'
+    +(isImg?'<img '+fileImgAttr(dc)+' alt="" style="width:100%;border-radius:10px;display:block">':'<div style="font-size:44px;text-align:center;padding:16px 0">\uD83D\uDCC4</div>')
+    +'<a class="btn btn-gold" style="display:block;text-align:center;margin-top:12px" '+fileLinkAttr(dc)+' download="'+esc(dc.name||"file")+'">Open / download</a>'
     +'<button class="btn btn-danger" onclick="delDocFile(\''+u+'\','+i+')">Remove file</button>'
     +'<button class="btn btn-ghost" onclick="docDetail(\''+u+'\')">\u2190 Back to document</button>');
 };
@@ -4295,8 +4351,8 @@ window.viewArrivalDoc = (u, i)=>{
   const isImg = (dc.type || "").indexOf("image/") === 0;
   openSheet('<h2 style="font-size:16px">' + (isImg ? '\uD83D\uDDBC ' : '\uD83D\uDCC4 ') + esc(dc.name || "Document") + '</h2>'
     + '<div class="sub">' + esc(propName(a.prop)) + ' \u00B7 arrived ' + fmtD(a.date) + '</div>'
-    + (isImg ? '<img src="' + dc.data + '" alt="" style="width:100%;border-radius:10px;display:block">' : '<div style="font-size:44px;text-align:center;padding:16px 0">\uD83D\uDCC4</div>')
-    + '<a class="btn btn-gold" style="display:block;text-align:center;margin-top:12px" href="' + dc.data + '" download="' + esc(dc.name || "document") + '">Open / download</a>'
+    + (isImg ? '<img ' + fileImgAttr(dc) + ' alt="" style="width:100%;border-radius:10px;display:block">' : '<div style="font-size:44px;text-align:center;padding:16px 0">\uD83D\uDCC4</div>')
+    + '<a class="btn btn-gold" style="display:block;text-align:center;margin-top:12px" ' + fileLinkAttr(dc) + ' download="' + esc(dc.name || "document") + '">Open / download</a>'
     + (canModArrivals() ? '<button class="btn btn-danger" onclick="delArrivalDoc(\'' + a.uid + '\',' + i + ')">Remove document</button>' : '')
     + '<button class="btn btn-ghost" onclick="closeSheet()">Close</button>');
 };
