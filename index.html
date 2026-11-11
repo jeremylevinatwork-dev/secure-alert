@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-build="fob-20261108-1030">
+<html lang="en" data-build="fob-20261111-1013">
 <head>
 <meta charset="UTF-8">
 <meta name="mobile-web-app-capable" content="yes">
@@ -3515,7 +3515,7 @@ window.delContractor=i=>{
 
 /* ---------- render all ---------- */
 /* ================= BEACONS (per-hotel, GPS pinned) ================= */
-const BEACON_STATUS = ["Active","Battery Low","Offline","Replaced","Spare","Unplugged"];
+const BEACON_STATUS = ["Active","Battery Low","Offline","Replaced","Spare","Unplugged","Broken — Out of Service"];
 let beaconSearch = "";
 function fobSessionName(){ return (S.session && S.session.name) || ""; }
 /* === USAGE LOG (Jeremy only) ===
@@ -3633,7 +3633,7 @@ window.printUsageLog = ()=>{
 /* === END USAGE LOG === */
 
 function beaconBadge(st){
-  const m={"Active":"b-green","Battery Low":"b-amber","Offline":"b-red","Replaced":"b-gray","Spare":"b-blue","Unplugged":"b-purple"};
+  const m={"Active":"b-green","Battery Low":"b-amber","Offline":"b-red","Replaced":"b-gray","Spare":"b-blue","Unplugged":"b-purple","Broken — Out of Service":"b-red"};
   return '<span class="badge '+(m[st]||"b-gray")+'">'+esc(st)+"</span>";
 }
 let pendingPin = null;
